@@ -1,0 +1,83 @@
+:root {
+  --black-color: #141414;
+  --white-color: #dbdbdb;
+
+  --secondary-light-color: #a9a9a9;
+  --secondary-color: #737373;
+  --secondary-dark-color: #474747;
+
+  --accent-light-color: #ffa07d;
+  --accent-medium-color: #ca5b31;
+  --accent-bright-color: #ce4511;
+  --accent-secondary-color: #733522;
+  --accent-dark-color: #301a13;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
+}
+
+body {
+  background-color: var(--black-color);
+  min-height: 100vh;
+  width: 100%;
+}
+
+@font-face {
+  font-family: "Montserrat-Medium";
+  src: url(./assets/fonts/Montserrat-Medium.woff2);
+}
+
+@font-face {
+  font-family: "FixelText-Medium";
+  src: url(./assets/fonts/FixelText/FixelText-Medium.woff2);
+}
+@font-face {
+  font-family: "FixelText-ExtraBold";
+  src: url(./assets/fonts/FixelText/FixelText-ExtraBold.woff2);
+}
+@font-face {
+  font-family: "FixelText-ExtraLight";
+  src: url(./assets/fonts/FixelText/FixelText-ExtraLight.woff2);
+}
+
+@font-face {
+  font-family: "FixelDisplay-Light";
+  src: url(./assets/fonts/FixelDisplay/FixelDisplay-Light.woff2);
+}
+@font-face {
+  font-family: "FixelDisplay-ExtraLight";
+  src: url(./assets/fonts/FixelDisplay/FixelDisplay-ExtraLight.woff2);
+}
+@font-face {
+  font-family: "FixelDisplay-Regular";
+  src: url(./assets/fonts/FixelDisplay/FixelDisplay-Regular.woff2);
+}
+@font-face {
+  font-family: "FixelDisplay-Medium";
+  src: url(./assets/fonts/FixelDisplay/FixelDisplay-Medium.woff2);
+}
+@font-face {
+  font-family: "FixelDisplay-SemiBold";
+  src: url(./assets/fonts/FixelDisplay/FixelDisplay-SemiBold.woff2);
+}
+@font-face {
+  font-family: "FixelDisplay-Bold";
+  src: url(./assets/fonts/FixelDisplay/FixelDisplay-Bold.woff2);
+}
+
+@font-face {
+  font-family: "NotoSansMono-Black";
+  src: url(./assets/fonts/NotoSansMono/NotoSansMono-Black.woff2);
+}
+@font-face {
+  font-family: "NotoSansMono-ExtraBold";
+  src: url(./assets/fonts/NotoSansMono/NotoSansMono-ExtraBold.woff2);
+}
+@font-face {
+  font-family: "NotoSansMono-SemiBold";
+  src: url(./assets/fonts/NotoSansMono/NotoSansMono-SemiBold.woff2);
+}

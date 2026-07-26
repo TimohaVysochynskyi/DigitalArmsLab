@@ -1,0 +1,25 @@
+.buttonWrapper {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.buttonIcon {
+  width: 16px;
+  height: 96px;
+  stroke: var(--secondary-color);
+}
+.button {
+  padding: 8px 20px;
+  height: 54px;
+  width: 300px;
+  background-color: var(--accent-bright-color);
+  border: 1px solid var(--white-color);
+
+  font-family: "FixelDisplay-SemiBold";
+  font-family: 600;
+  font-size: 20px;
+  line-height: 120%;
+  color: var(--white-color);
+
+  cursor: pointer;
+}

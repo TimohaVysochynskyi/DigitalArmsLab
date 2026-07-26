@@ -1,0 +1,185 @@
+.sectionWrapper {
+  width: 100%;
+  padding: 80px;
+}
+.section {
+  max-width: 1920px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 140px;
+}
+
+.infoWrapper {
+  width: 535px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.titleWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.title {
+  font-family: "FixelDisplay-Medium";
+  font-weight: 500;
+  font-size: 36px;
+  line-height: 120%;
+  color: var(--white-color);
+}
+.subtitle {
+  font-family: "FixelDisplay-ExtraLight";
+  font-weight: 200;
+  font-size: 24px;
+  line-height: 120%;
+  color: var(--secondary-light-color);
+}
+
+.contactsList {
+  width: 100%;
+  list-style-type: none;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+.contactsItem {
+  display: flex;
+  gap: 48px;
+}
+.contactsIcon {
+  width: 48px;
+  height: 48px;
+}
+.contactsIcon rect {
+  stroke: var(--secondary-light-color);
+}
+.contactsIcon path {
+  fill: var(--white-color);
+}
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.contactText {
+  font-family: "FixelDisplay-Regular";
+  font-size: 20px;
+  line-height: 120%;
+  color: var(--secondary-light-color);
+}
+.contactLink {
+  font-family: "FixelDisplay-Regular";
+  font-size: 20px;
+  line-height: 120%;
+  color: var(--accent-medium-color);
+  text-decoration: none;
+}
+
+.socialsWrapper {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.socialsList {
+  list-style-type: none;
+  display: flex;
+  gap: 16px;
+}
+.socialsIcon {
+  width: 40px;
+  height: 40px;
+}
+.socialsLink path {
+  fill: var(--secondary-color);
+}
+.contactTitle,
+.socialsTitle {
+  font-family: "FixelDisplay-SemiBold";
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 120%;
+  color: var(--white-color);
+}
+
+.formWrapper {
+  flex: 1;
+  max-width: 620px;
+  border: 1px solid var(--white-color);
+  padding: 48px 48px 72px 48px;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 38px;
+}
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.labelWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.label {
+  font-family: "FixelDisplay-Regular";
+  font-size: 20px;
+  line-height: 120%;
+  color: var(--white-color);
+}
+.errorMessage {
+  font-size: 14px;
+  color: orangered;
+  text-align: right;
+}
+.input {
+  padding: 11px 18px;
+  border-radius: 3px;
+  border: 1px solid var(--secondary-color);
+  background: none;
+  outline: none;
+
+  font-family: "FixelDisplay-Regular";
+  font-size: 16px;
+  line-height: 120%;
+  color: var(--white-color);
+}
+.input::placeholder {
+  color: var(--secondary-color);
+}
+.textarea {
+  resize: none;
+  height: 100px;
+}
+
+.buttonWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+.buttonIcon {
+  width: 17px;
+  height: 78px;
+}
+.buttonIcon path {
+  stroke: var(--secondary-dark-color);
+}
+.button {
+  padding: 8px 20px;
+  height: 48px;
+  border: none;
+  background-color: var(--accent-secondary-color);
+
+  font-family: "FixelDisplay-ExtraLight";
+  font-family: 200;
+  font-size: 18px;
+  line-height: 120%;
+  color: var(--white-color);
+
+  cursor: pointer;
+}

@@ -1,0 +1,10 @@
+.bgGrid {
+  height: 300vh;
+  width: 100%;
+  position: absolute;
+  z-index: -1;
+  top: 100vh;
+  left: 0;
+
+  background-image: url(/src/assets/svg/bg-grid.svg);
+}

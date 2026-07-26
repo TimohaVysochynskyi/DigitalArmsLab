@@ -1,0 +1,14 @@
+.navigationLink {
+  font-family: "FixelText-Medium";
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 100%;
+  text-transform: uppercase;
+  color: var(--white-color);
+  text-decoration: none;
+}
+.navigationLinkAccent {
+  font-family: "FixelText-ExtraBold";
+  color: var(--accent-bright-color);
+  letter-spacing: 5%;
+}

@@ -1,0 +1,78 @@
+.footerWrapper {
+  width: 100%;
+  background-color: var(--black-color);
+  padding: 80px;
+}
+.footer {
+  margin: 0 auto;
+  max-width: 1920px;
+  display: flex;
+  flex-direction: column;
+  gap: 72px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.row:first-child {
+  gap: 80px;
+}
+.description {
+  width: 440px;
+  padding-right: 32px;
+  border-right: 1px solid var(--secondary-color);
+}
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.logo {
+  height: 22px;
+  width: 22px;
+  fill: var(--white-color);
+}
+.title {
+  font-family: "Montserrat-Medium";
+  font-weight: 500;
+  font-size: 21px;
+  color: var(--white-color);
+}
+.subtitle {
+  font-family: "FixelDisplay-Regular";
+  margin-top: 16px;
+  font-size: 20px;
+  line-height: 120%;
+  color: var(--secondary-color);
+}
+.nav {
+  flex: 1;
+}
+.navList {
+  margin-left: auto;
+  width: 100%;
+  max-width: 764px;
+  list-style-type: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+}
+.copyright {
+  font-family: "FixelDisplay-Light";
+  line-height: 120%;
+  font-weight: 300;
+  color: var(--secondary-color);
+}
+.linkList {
+  list-style-type: none;
+  display: flex;
+  gap: 72px;
+}
+.link {
+  font-family: "FixelDisplay-Light";
+  font-weight: 300;
+  color: var(--white-color);
+  text-decoration: none;
+  line-height: 120%;
+}

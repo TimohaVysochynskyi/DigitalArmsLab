@@ -1,0 +1,15 @@
+/* Шар ефекту. Геометрію (розмір + негативний зсув для «полів») задає JS,
+   тут лише базове позиціонування. inset: 0 — фолбек до першого resize.
+
+   Контракт секції-хоста:
+     - sectionWrapper: position: relative;  (БЕЗ z-index/transform/isolation — щоб не
+       створювати stacking context; інакше «поля» ефекту сховаються під сусідні секції)
+     - sectionWrapper: overflow має лишатися visible (не hidden) — інакше ефект обріжеться;
+     - контент секції: position: relative; z-index: 1;  (щоб бути поверх ефекту). */
+.canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  z-index: 0;
+}

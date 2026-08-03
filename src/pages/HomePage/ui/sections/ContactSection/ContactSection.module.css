@@ -91,10 +91,13 @@
 .socialsIcon {
   width: 40px;
   height: 40px;
-}
-.socialsLink path {
   fill: var(--secondary-color);
+  transition: 0.2s;
 }
+.socialsIcon:hover {
+  fill: var(--secondary-light-color);
+}
+
 .contactTitle,
 .socialsTitle {
   font-family: "FixelDisplay-SemiBold";
@@ -107,6 +110,7 @@
 .formWrapper {
   flex: 1;
   max-width: 620px;
+  min-width: 400px;
   border: 1px solid var(--white-color);
   padding: 48px 48px 72px 48px;
 }
@@ -148,6 +152,17 @@
   line-height: 120%;
   color: var(--white-color);
 }
+.input:not(:placeholder-shown) {
+  border-color: var(--secondary-light-color);
+}
+.input:focus {
+  border-color: var(--accent-medium-color);
+}
+.input:disabled {
+  border-color: var(--secondary-dark-color);
+  color: var(--secondary-dark-color);
+  cursor: not-allowed;
+}
 .input::placeholder {
   color: var(--secondary-color);
 }
@@ -182,4 +197,91 @@
   color: var(--white-color);
 
   cursor: pointer;
+  transition: 0.3s;
+}
+.button:hover,
+.button:focus {
+  background-color: var(--accent-medium-color);
+}
+.button:active {
+  background-color: var(--accent-bright-color);
+}
+.button:disabled {
+  color: var(--secondary-light-color);
+  background-color: var(--secondary-color);
+  cursor: not-allowed;
+}
+
+/**** RESPONSIVE ****/
+
+@media screen AND (max-width: 1280px) {
+  .section {
+    gap: 100px;
+  }
+  .formWrapper {
+    padding: 48px 32px 72px 32px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .sectionWrapper {
+    padding: 40px 80px;
+  }
+  .section {
+    flex-direction: column;
+    gap: 100px;
+  }
+  .infoWrapper {
+    width: 100%;
+  }
+  .formWrapper {
+    max-width: 100%;
+  }
+  .title {
+    font-size: 24px;
+  }
+  .subtitle {
+    font-size: 18px;
+  }
+  .contactsItem {
+    gap: 24px;
+  }
+  .contactsIcon {
+    width: 36px;
+    height: 36px;
+  }
+  .contactTitle {
+    font-size: 18px;
+  }
+  .contactText {
+    font-size: 16px;
+  }
+  .contactLink {
+    font-size: 16px;
+  }
+  .socialsTitle {
+    font-size: 24px;
+  }
+
+  .buttonWrapper {
+    gap: 12px;
+    padding: 0;
+  }
+  .button {
+    font-size: 16px;
+    height: 35px;
+    padding: 8px 12px;
+  }
+  .buttonIcon {
+    height: 46px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .sectionWrapper {
+    padding: 40px 24px;
+  }
+  .formWrapper {
+    min-width: auto;
+  }
 }

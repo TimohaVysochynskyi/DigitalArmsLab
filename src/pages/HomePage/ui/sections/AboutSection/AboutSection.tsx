@@ -4,7 +4,7 @@ import css from "./AboutSection.module.css";
 const AboutSection = () => {
   return (
     <>
-      <section className={css.sectionWrapper}>
+      <section id="about" className={css.sectionWrapper}>
         <VisionScanner />
         <div className={css.section}>
           <div className={css.content}>
@@ -33,7 +33,7 @@ const AboutSection = () => {
                 </svg>
 
                 <button type="button" className={css.button}>
-                  спробуй голосового провідника
+                  спробуй голосового гіда
                   <svg
                     className={css.arrowIcon}
                     viewBox="0 0 14 14"

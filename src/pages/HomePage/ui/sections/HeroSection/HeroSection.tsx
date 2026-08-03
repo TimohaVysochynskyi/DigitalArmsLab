@@ -6,7 +6,7 @@ import bgVideo from "@/assets/videos/hero-bg.mp4";
 const HeroSection = () => {
   return (
     <>
-      <section className={css.heroWrapper}>
+      <section id="hero" className={css.heroWrapper}>
         <video
           src={bgVideo}
           autoPlay

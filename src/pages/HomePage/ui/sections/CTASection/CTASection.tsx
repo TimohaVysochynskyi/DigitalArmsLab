@@ -3,15 +3,14 @@ import CTAButton from "@/shared/CTAButton";
 
 import css from "./CTASection.module.css";
 
-import akmsImage from "@/assets/images/akms-2.png";
-
 const CTASection = () => {
   return (
     <>
-      <section className={css.sectionWrapper}>
+      <section id="cta" className={css.sectionWrapper}>
         <VisionScanner />
         <div className={css.section}>
-          <img src={akmsImage} alt="АКМС" className={css.akmsImage} />
+          {/* Слот під 3D-АКМ (замість картинки akms-2). Габарити = аспект akms-2.png. */}
+          <div id="akm-slot-cta" className={css.akmSlot} aria-hidden="true" />
           <CTAButton>дізнатись більше</CTAButton>
         </div>
       </section>

@@ -3,10 +3,11 @@
   height: 100vh;
   padding: 124px 80px 110px 80px;
   position: relative;
+  overflow: hidden;
 }
 .bgVideo {
   position: absolute;
-  z-index: 0;
+  z-index: -2;
   top: 0;
   left: 0;
   width: 100%;
@@ -67,4 +68,59 @@
   line-height: 120%;
   color: var(--white-color);
   text-align: center;
+}
+
+/**** RESPONSIVE ****/
+
+@media screen AND (max-width: 1280px) {
+  .title {
+    font-size: 64px;
+  }
+  .subtitle {
+    font-size: 22px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .heroWrapper {
+    padding: 100px 80px 40px 80px;
+  }
+  .hero {
+    justify-content: flex-start;
+    gap: 78px;
+  }
+  .bgGradient {
+    width: 470px;
+    height: 330px;
+  }
+  .titleWrapper {
+    padding: 32px 0;
+  }
+  .title {
+    font-size: 52px;
+  }
+  .subtitle {
+    font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .heroWrapper {
+    padding: 100px 24px 40px 24px;
+  }
+  .hero {
+    gap: 52px;
+  }
+  .title {
+    font-size: 44px;
+  }
+  .subtitle {
+    font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 350px) {
+  .title {
+    font-size: 38px;
+  }
 }

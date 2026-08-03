@@ -1,7 +1,15 @@
-.sectionWrapper {
+/* Довжина скролу секції = 4 екрани → 3 екрани прокрутки на 3 кроки. */
+.sectionOuter {
   width: 100%;
+  height: 400vh;
+}
+/* Залипає на в'юпорт, поки проходиш зовнішній контейнер. */
+.sticky {
+  position: sticky;
+  top: 0;
   height: 100vh;
   padding: 80px;
+  overflow: hidden;
 }
 .section {
   max-width: 1920px;
@@ -10,16 +18,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 }
 .imageWrapper {
   padding: 0 64px;
   height: 100%;
 }
-.akmsImage {
-  height: inherit;
+.akmSlot {
+  height: 100%;
+  aspect-ratio: 578 / 1600;
+  max-width: 100%;
 }
 
 .card {
+  flex-shrink: 0;
   width: 560px;
   height: 330px;
   border: 1px solid var(--white-color);
@@ -27,6 +39,8 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
+  position: absolute;
+  right: 0;
 }
 .cardHeader {
   display: flex;
@@ -34,13 +48,32 @@
   gap: 24px;
 }
 .cardNumber {
-  width: 82px;
-  height: 82px;
+  display: inline-flex;
+  flex-shrink: 0; /* не даємо звужувати номер — інакше праву цифру обрізає */
   color: var(--accent-bright-color);
   font-size: 68px;
   font-family: "NotoSansMono-ExtraBold";
   font-weight: 800;
   line-height: 120%;
+  overflow: hidden;
+}
+.cardZero {
+  display: inline-block;
+}
+/* Друга цифра «залітає» знизу при зміні кроку (нуль лишається на місці). */
+.cardDigit {
+  display: inline-block;
+  animation: digitIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes digitIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 .cardTitle {
   font-size: 36px;
@@ -48,10 +81,79 @@
   font-family: "FixelDisplay-Medium";
   font-weight: 500;
   color: var(--white-color);
+  animation: cardFade 0.45s ease both;
 }
 .cardText {
   font-family: "FixelDisplay-Regular";
   font-size: 20px;
   line-height: 120%;
   color: var(--secondary-light-color);
+  animation: cardFade 0.5s ease both;
+}
+@keyframes cardFade {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/**** RESPONSIVE ****/
+
+@media screen and (max-width: 1024px) {
+  .card {
+    padding: 16px;
+    width: 350px;
+    gap: 20px;
+    height: auto;
+  }
+  .cardHeader {
+    gap: 12px;
+  }
+  .cardNumber {
+    font-size: 36px;
+  }
+  .cardTitle {
+    font-size: 24px;
+  }
+  .cardText {
+    font-size: 16px;
+  }
+  .imageWrapper {
+    padding: 0;
+    width: 220px;
+    height: auto;
+  }
+  .akmSlot {
+    height: auto;
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .sticky {
+    padding: 40px 24px;
+  }
+  .section {
+    flex-direction: column-reverse;
+    justify-content: center;
+    gap: 72px;
+  }
+  .imageWrapper {
+    width: 100%;
+    height: 320px;
+    display: flex;
+    justify-content: center;
+  }
+  .akmSlot {
+    height: 100%;
+    width: auto;
+  }
+  .card {
+    width: 100%;
+    position: relative;
+  }
 }

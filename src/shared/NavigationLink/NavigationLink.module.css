@@ -1,14 +1,45 @@
 .navigationLink {
   font-family: "FixelText-Medium";
   font-weight: 500;
-  font-size: 16px;
+  font-size: var(--nav-link-fz, 16px);
   line-height: 100%;
   text-transform: uppercase;
   color: var(--white-color);
   text-decoration: none;
+  transition: 0.2s;
 }
+.navigationLink:hover,
+.navigationLink:focus {
+  color: var(--accent-extralight-color);
+}
+.navigationLink:active {
+  color: var(--accent-light-color);
+}
+.navigationLink:disabled {
+  color: var(--secondary-color);
+  cursor: not-allowed;
+}
+
 .navigationLinkAccent {
   font-family: "FixelText-ExtraBold";
   color: var(--accent-bright-color);
   letter-spacing: 5%;
+  transition: 0.2s;
+}
+.navigationLinkAccent:hover {
+  color: var(--accent-light-color);
+  text-shadow: 0px 0px 3px 0px #ffa07d;
+}
+.navigationLinkAccent:active {
+  color: var(--accent-medium-color);
+  text-shadow: none;
+}
+.navigationLinkAccent:focus {
+  color: var(--accent-light-color);
+  text-shadow: none;
+}
+.navigationLink:disabled {
+  color: var(--secondary-color);
+  text-shadow: none;
+  cursor: not-allowed;
 }

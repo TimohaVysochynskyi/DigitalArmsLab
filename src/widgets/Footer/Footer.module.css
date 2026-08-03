@@ -76,3 +76,50 @@
   text-decoration: none;
   line-height: 120%;
 }
+
+/**** RESPONSIVE ****/
+
+@media screen AND (max-width: 1280px) {
+  .description {
+    width: 380px;
+  }
+  .navList {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .footer {
+    gap: 48px;
+  }
+  .description {
+    border-right: none;
+  }
+  .subtitle {
+    font-size: 16px;
+  }
+  .row:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+  .navList {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .row:last-child {
+    flex-direction: column-reverse;
+    gap: 16px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .footerWrapper {
+    padding: 80px 24px;
+  }
+  .description {
+    width: 100%;
+  }
+}

@@ -14,6 +14,7 @@
   max-width: 1920px;
   height: 100%;
   display: flex;
+  align-items: center;
   gap: 40px;
 }
 .logoWrapper {
@@ -22,6 +23,8 @@
   align-items: center;
   gap: 5px;
   width: 300px;
+  height: 100%;
+  text-decoration: none;
 }
 .logo {
   height: 22px;
@@ -45,4 +48,37 @@
   display: flex;
   align-items: center;
   gap: 40px;
+}
+
+/**** RESPONSIVE ****/
+
+@media screen AND (max-width: 1280px) {
+  .logoWrapper {
+    width: 250px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .nav {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .headerWrapper {
+    padding: 0 40px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .headerWrapper {
+    padding: 0 24px;
+  }
+  .logoWrapper {
+    width: auto;
+    padding-right: 24px;
+  }
+  .title {
+    display: none;
+  }
 }

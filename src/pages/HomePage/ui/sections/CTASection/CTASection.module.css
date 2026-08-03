@@ -2,6 +2,9 @@
   width: 100%;
   padding: 160px 80px;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .section {
   display: flex;
@@ -11,6 +14,34 @@
   position: relative;
   z-index: 1;
 }
-.akmsImage {
+.akmSlot {
   height: 340px;
+  aspect-ratio: 1872 / 677;
+  max-width: 100%;
+}
+
+/**** RESPONSIVE ****/
+
+@media screen and (max-width: 1024px) {
+  .sectionWrapper {
+    padding: 40px 80px;
+    min-height: 660px;
+  }
+  .section {
+    gap: 50px;
+  }
+  .akmSlot {
+    height: 290px;
+    max-width: 100%;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .sectionWrapper {
+    padding: 40px 24px;
+  }
+  .akmSlot {
+    height: auto;
+    width: 100%;
+  }
 }

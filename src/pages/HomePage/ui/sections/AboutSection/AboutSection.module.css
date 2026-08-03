@@ -18,6 +18,7 @@
 }
 .content {
   width: 660px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 80px;
@@ -65,7 +66,7 @@
 .buttonIcon {
   width: 16px;
   height: 76px;
-  stroke: var(--secondary-color);
+  stroke: var(--secondary-dark-color);
 }
 .button {
   padding: 8px 20px;
@@ -80,6 +81,31 @@
   color: var(--accent-light-color);
 
   cursor: pointer;
+  transition: 0.3s;
+}
+.button:hover {
+  background-color: var(--accent-secondary-color);
+  border-color: var(--accent-light-color);
+  box-shadow: 0px 0px 8.3px 1px var(--accent-light-color);
+  color: var(--accent-extralight-color);
+}
+.button:active {
+  background: none;
+  border-color: var(--accent-medium-color);
+  box-shadow: none;
+  color: var(--accent-medium-color);
+}
+.button:focus {
+  border-color: var(--accent-light-color);
+  box-shadow: none;
+  color: var(--accent-extralight-color);
+}
+.button:disabled {
+  background-color: var(--secondary-dark-color);
+  border-color: var(--secondary-color);
+  box-shadow: none;
+  color: var(--secondary-light-color);
+  cursor: not-allowed;
 }
 
 .arrowIcon {
@@ -89,4 +115,73 @@
   margin-left: 16px;
   position: relative;
   top: 1px;
+}
+.button:hover .arrowIcon,
+.button:focus .arrowIcon {
+  stroke: var(--accent-extralight-color);
+}
+.button:active .arrowIcon {
+  stroke: var(--accent-medium-color);
+}
+.button:disabled .arrowIcon {
+  stroke: var(--secondary-light-color);
+}
+
+/**** RESPONSIVE ****/
+
+@media screen and (max-width: 1024px) {
+  .content {
+    gap: 96px;
+  }
+  .title {
+    font-size: 28px;
+    width: 430px;
+  }
+  .guide {
+    font-size: 18px;
+  }
+  .description {
+    margin-top: 24px;
+    font-size: 18px;
+  }
+  .buttonWrapper {
+    gap: 12px;
+  }
+  .button {
+    font-size: 16px;
+    padding: 8px 12px;
+    height: 35px;
+  }
+  .buttonIcon {
+    height: 46px;
+  }
+  .arrowIcon {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .sectionWrapper {
+    padding: 80px 24px;
+  }
+  .title {
+    font-size: 24px;
+    width: 100%;
+  }
+  .buttonWrapper {
+    margin-top: 44px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .arrowIcon {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 350px) {
+  .title {
+    font-size: 22px;
+  }
 }

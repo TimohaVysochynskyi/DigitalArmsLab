@@ -1,10 +1,13 @@
+/* Зона фонової сітки: обгортає About→CTA. Сітка тягнеться на всю її висоту (inset: 0),
+   тож автоматично покриває від About до початку Contacts за будь-якої адаптивної висоти. */
+.gridZone {
+  position: relative;
+}
 .bgGrid {
-  height: 300vh;
-  width: 100%;
   position: absolute;
-  z-index: -1;
-  top: 100vh;
-  left: 0;
-
+  inset: 0;
+  z-index: -2; /* за 3D-канвасом (-1), згідно z-контракту */
   background-image: url(/src/assets/svg/bg-grid.svg);
+  background-repeat: repeat;
+  pointer-events: none;
 }

@@ -78,7 +78,7 @@ const ContactSection = () => {
               <h3 className={css.socialsTitle}>Ми в соцмережах</h3>
               <ul className={css.socialsList}>
                 <li>
-                  <a href="#" className={css.socialsLink}>
+                  <a href="#">
                     <svg
                       className={css.socialsIcon}
                       viewBox="0 0 39 39"
@@ -94,7 +94,7 @@ const ContactSection = () => {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className={css.socialsLink}>
+                  <a href="#">
                     <svg
                       className={css.socialsIcon}
                       viewBox="0 0 40 40"
@@ -106,7 +106,7 @@ const ContactSection = () => {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className={css.socialsLink}>
+                  <a href="#">
                     <svg
                       className={css.socialsIcon}
                       viewBox="0 0 40 40"
@@ -118,7 +118,7 @@ const ContactSection = () => {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className={css.socialsLink}>
+                  <a href="#">
                     <svg
                       className={css.socialsIcon}
                       viewBox="0 0 36 33"

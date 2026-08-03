@@ -1,12 +1,15 @@
+import { Link } from "react-router-dom";
+
 import css from "./Header.module.css";
 import NavigationLink from "@/shared/NavigationLink";
+import MobileMenu from "./MobileMenu";
 
 const Header = () => {
   return (
     <>
       <header className={css.headerWrapper}>
         <div className={css.header}>
-          <div className={css.logoWrapper}>
+          <Link to="/" className={css.logoWrapper}>
             <svg
               stroke="currentColor"
               fill="currentColor"
@@ -18,7 +21,7 @@ const Header = () => {
               <path d="M256 32 20 464h472L256 32z"></path>
             </svg>
             <h1 className={css.title}>DigitalArmsLab</h1>
-          </div>
+          </Link>
           <nav className={css.nav}>
             <ul className={css.navList}>
               <li>
@@ -35,6 +38,7 @@ const Header = () => {
               Лабораторія
             </NavigationLink>
           </nav>
+          <MobileMenu />
         </div>
       </header>
     </>

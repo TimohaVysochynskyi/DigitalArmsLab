@@ -1,9 +1,7 @@
-/* GSAP-хореографія HomePage: пише у спільний Choreo (для 3D) і повідомляє активний крок
-   Features (для картки). Тригериться по id секцій.
-
-   Пін Features — CSS position:sticky (див. FeaturesSection). ScrollTrigger лише читає прогрес.
-   scrub: SCRUB (число) додає інерцію → рухи моделей плавні, але тягнуться за скролом.
-   Переліт АКМ Features→CTA — scroll-driven (akmFlow 0→1), як у дрона. */
+/* GSAP ScrollTrigger-хореографія HomePage.
+   Пише у спільний мутабельний Choreo (його читають 3D-моделі в useFrame) і повідомляє
+   активний крок Features для зміни картки. Пін Features — це CSS position:sticky
+   (див. FeaturesSection); тут ScrollTrigger лише зчитує прогрес. */
 
 import type { RefObject } from "react";
 import { useGSAP } from "@gsap/react";
@@ -13,37 +11,21 @@ import type { Choreo } from "./types";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const DEG = Math.PI / 180;
 const FEATURES_STEPS = 3;
-const SCRUB = 0.6; // інерція скрабу (сек) — баланс плавність/відгук
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const D2R = Math.PI / 180;
+// Інерція скрабу (сек): рухи моделей плавні, але наздоганяють скрол.
+const SCRUB = 0.6;
 
-// ─── A/B-перемикач режиму обертання АКМ у Features ───────────────────────────────
-// "inspect" — АКМ лягає у 3/4 з поглядом зверху (тримається на фрізі), потім рівно.
-// "orbit"   — повільний доворот через усі кроки + сталий легкий нахил зверху.
-// Коли визначишся: лиши потрібну гілку у featuresOrientation() і прибери іншу + цю змінну.
-const FEATURES_ROTATION_MODE = "inspect" as "inspect" | "orbit";
+// Поза «інспекції» АКМ у Features: розворот у 3/4 з поглядом трохи зверху.
+const INSPECT_YAW = -20 * DEG;
+const INSPECT_PITCH = 18 * DEG;
 
-const INSPECT_YAW = -20 * D2R;
-const INSPECT_PITCH = 18 * D2R;
-const ORBIT_YAW_FROM = -25 * D2R;
-const ORBIT_YAW_TO = 25 * D2R;
-const ORBIT_PITCH = 12 * D2R;
-
-type Orient = { yaw: number; pitch: number; roll: number };
-
-const featuresOrientation = (seg: number, segP: number, p: number): Orient => {
-  if (FEATURES_ROTATION_MODE === "orbit") {
-    return { yaw: lerp(ORBIT_YAW_FROM, ORBIT_YAW_TO, p), pitch: ORBIT_PITCH, roll: 0 };
-  }
-  if (seg === 0) {
-    return { yaw: lerp(0, INSPECT_YAW, segP), pitch: lerp(0, INSPECT_PITCH, segP), roll: 0 };
-  }
-  if (seg === 1) {
-    return { yaw: INSPECT_YAW, pitch: INSPECT_PITCH, roll: 0 };
-  }
-  return { yaw: lerp(INSPECT_YAW, 0, segP), pitch: lerp(INSPECT_PITCH, 0, segP), roll: 0 };
+// Наскільки АКМ «розгорнутий в інспекцію» на кроці: 0→1 (розбірка), 1 (фріз), 1→0 (збірка).
+const inspectAmount = (step: number, stepProgress: number) => {
+  if (step === 0) return stepProgress;
+  if (step === 1) return 1;
+  return 1 - stepProgress;
 };
 
 export const useHomeChoreography = (
@@ -52,7 +34,7 @@ export const useHomeChoreography = (
 ) => {
   useGSAP(
     () => {
-      const c = choreoRef.current;
+      const choreo = choreoRef.current;
       let lastStep = -1;
 
       // Дрон видимий, поки в'юпорт перетинає Hero..About.
@@ -62,18 +44,18 @@ export const useHomeChoreography = (
         endTrigger: "#about",
         end: "bottom top",
         onToggle: (self) => {
-          c.droneVisible = self.isActive;
+          choreo.droneVisible = self.isActive;
         },
       });
 
-      // Політ дрона: завершується, поки About в'їжджає у в'юпорт.
+      // Політ дрона: Hero → About (завершується, поки About в'їжджає у в'юпорт).
       ScrollTrigger.create({
         trigger: "#about",
         start: "top bottom",
         end: "top top",
         scrub: SCRUB,
         onUpdate: (self) => {
-          c.droneProgress = self.progress;
+          choreo.droneProgress = self.progress;
         },
       });
 
@@ -84,54 +66,54 @@ export const useHomeChoreography = (
         endTrigger: "#cta",
         end: "bottom top",
         onToggle: (self) => {
-          c.akmVisible = self.isActive;
+          choreo.akmVisible = self.isActive;
         },
       });
 
-      // Features (візуальний пін — CSS sticky): 3 кроки, АКМ у своєму боксі (flow = 0).
+      // Features (візуальний пін — CSS sticky): 3 кроки. АКМ у своєму боксі (flow = 0):
+      // крок 0 — розбірка, крок 1 — фріз розібраного, крок 2 — збірка; + поза «інспекції».
       ScrollTrigger.create({
         trigger: "#features",
         start: "top top",
         end: "bottom bottom",
         scrub: SCRUB,
         onEnter: () => {
-          c.akmClip = "diassemble";
-          c.akmScrub = 0;
-          c.akmYaw = 0;
-          c.akmPitch = 0;
-          c.akmRollZ = 0;
+          choreo.akmClip = "diassemble";
+          choreo.akmScrub = 0;
+          choreo.akmYaw = 0;
+          choreo.akmPitch = 0;
         },
         onUpdate: (self) => {
-          const p = self.progress;
-          const seg = Math.min(FEATURES_STEPS - 1, Math.floor(p * FEATURES_STEPS));
-          const segP = p * FEATURES_STEPS - seg;
+          const step = Math.min(
+            FEATURES_STEPS - 1,
+            Math.floor(self.progress * FEATURES_STEPS),
+          );
+          const stepProgress = self.progress * FEATURES_STEPS - step;
 
-          if (seg !== lastStep) {
-            lastStep = seg;
-            onFeaturesStep(seg);
+          if (step !== lastStep) {
+            lastStep = step;
+            onFeaturesStep(step);
           }
 
-          c.akmFlow = 0;
-          // Крок 0 — розбірка (скраб); крок 1 — застигла розібрана поза; крок 2 — збірка.
-          if (seg === 0) {
-            c.akmClip = "diassemble";
-            c.akmScrub = segP;
-          } else if (seg === 1) {
-            c.akmClip = "diassemble";
-            c.akmScrub = 1;
+          choreo.akmFlow = 0;
+          if (step === 0) {
+            choreo.akmClip = "diassemble";
+            choreo.akmScrub = stepProgress;
+          } else if (step === 1) {
+            choreo.akmClip = "diassemble";
+            choreo.akmScrub = 1;
           } else {
-            c.akmClip = "assemble";
-            c.akmScrub = segP;
+            choreo.akmClip = "assemble";
+            choreo.akmScrub = stepProgress;
           }
 
-          const o = featuresOrientation(seg, segP, p);
-          c.akmYaw = o.yaw;
-          c.akmPitch = o.pitch;
-          c.akmRollZ = o.roll;
+          const inspect = inspectAmount(step, stepProgress);
+          choreo.akmYaw = INSPECT_YAW * inspect;
+          choreo.akmPitch = INSPECT_PITCH * inspect;
         },
       });
 
-      // Переліт АКМ Features→CTA (scroll-driven): від кінця Features до появи CTA у центрі.
+      // Переліт АКМ Features → CTA (scroll-driven): від кінця Features до появи CTA у центрі.
       ScrollTrigger.create({
         trigger: "#features",
         start: "bottom bottom",
@@ -139,8 +121,8 @@ export const useHomeChoreography = (
         end: "top center",
         scrub: SCRUB,
         onUpdate: (self) => {
-          c.akmFlow = self.progress;
-          c.akmClip = "idle";
+          choreo.akmFlow = self.progress;
+          choreo.akmClip = "idle";
         },
       });
     },

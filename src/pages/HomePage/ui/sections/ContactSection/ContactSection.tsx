@@ -3,7 +3,7 @@ import css from "./ContactSection.module.css";
 const ContactSection = () => {
   return (
     <>
-      <section className={css.sectionWrapper}>
+      <section id="contact" className={css.sectionWrapper}>
         <div className={css.section}>
           <div className={css.infoWrapper}>
             <div className={css.titleWrapper}>

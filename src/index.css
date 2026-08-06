@@ -32,12 +32,16 @@ body {
 }
 
 @font-face {
+  font-family: "FixelText-ExtraBold";
+  src: url(./assets/fonts/FixelText/FixelText-ExtraBold.woff2);
+}
+@font-face {
   font-family: "FixelText-Medium";
   src: url(./assets/fonts/FixelText/FixelText-Medium.woff2);
 }
 @font-face {
-  font-family: "FixelText-ExtraBold";
-  src: url(./assets/fonts/FixelText/FixelText-ExtraBold.woff2);
+  font-family: "FixelText-Regular";
+  src: url(./assets/fonts/FixelText/FixelText-Regular.woff2);
 }
 @font-face {
   font-family: "FixelText-ExtraLight";
@@ -80,4 +84,8 @@ body {
 @font-face {
   font-family: "NotoSansMono-SemiBold";
   src: url(./assets/fonts/NotoSansMono/NotoSansMono-SemiBold.woff2);
+}
+@font-face {
+  font-family: "NotoSansMono-Medium";
+  src: url(./assets/fonts/NotoSansMono/NotoSansMono-Medium.woff2);
 }

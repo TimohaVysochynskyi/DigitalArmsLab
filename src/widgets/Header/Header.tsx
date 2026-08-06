@@ -28,7 +28,7 @@ const Header = () => {
                 <NavigationLink to="#about">Про проєкт</NavigationLink>
               </li>
               <li>
-                <NavigationLink to="#goal">Ціль</NavigationLink>
+                <NavigationLink to="#features">Ціль</NavigationLink>
               </li>
               <li>
                 <NavigationLink to="#contact">Зв'яжіться з нами</NavigationLink>

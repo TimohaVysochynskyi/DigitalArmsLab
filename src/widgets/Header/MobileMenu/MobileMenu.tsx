@@ -108,7 +108,7 @@ const MobileMenu = () => {
                   <NavigationLink to="#about">Про проєкт</NavigationLink>
                 </li>
                 <li>
-                  <NavigationLink to="#goal">Ціль</NavigationLink>
+                  <NavigationLink to="#features">Ціль</NavigationLink>
                 </li>
                 <li>
                   <NavigationLink to="#contact">

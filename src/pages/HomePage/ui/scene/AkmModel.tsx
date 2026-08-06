@@ -1,14 +1,11 @@
 /* eslint-disable react-hooks/immutability --
-   керування анімаціями three.js — це імперативне мутування AnimationAction/mixer
-   (штатний патерн three, а не React-стан), тож правило незастосовне тут. */
+   керування анімаціями three.js — імперативне мутування AnimationAction/mixer (штатний
+   патерн three, а не React-стан), тож правило тут незастосовне. */
 
-/* АКМ: одна модель. Позиція — це blend між DOM-боксами двох слотів за choreo.akmFlow:
-     flow = 0 → бокс Features; flow = 1 → бокс CTA.
-   Під час Features flow=0 (стоїть у боксі, скраб кліпів); у проміжку flow 0→1 — scroll-driven
-   переліт (як у дрона); у CTA flow=1 (точно на боксі, без смикання).
-
-   Оберт: facing (inner) — профіль до глядача; rollZ (outer, площина екрана) — як CSS rotate().
-   Дефолт моделі: ствол уперед / приклад до глядача → facing Y = -π/2 робить профіль. */
+/* АКМ — одна модель для двох слотів (Features та CTA). Її екранна позиція та розмір
+   вписуються в DOM-бокс активного слота; при переході між секціями точка плавно перелітає
+   від боксу Features до боксу CTA (choreo.akmFlow 0→1). Орієнтація у Features — поза
+   «інспекції» (choreo.akmYaw/akmPitch), що при перельоті вирівнюється в горизонталь CTA. */
 
 import { useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
@@ -27,213 +24,196 @@ import {
 } from "three";
 import type { AkmClip, AkmSlotKey, Choreo } from "./types";
 import { AKM_SLOT_ID } from "./types";
+import { clamp01, lerp, smoothstep } from "./math";
 
-const MODEL_URL = "/models/akm.glb";
+const MODEL_URL = "/models/akm.opt.glb";
 useGLTF.preload(MODEL_URL);
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
-const smooth = (t: number) => t * t * (3 - 2 * t);
-
-// Орієнтація моделі однакова для обох слотів (профіль). facing[1]=-π/2 — знак фліпає бік/ствол.
+// Профіль до глядача (дефолт моделі — ствол уперед / приклад до нас).
 const FACING: [number, number, number] = [0, -Math.PI / 2, 0];
 
-// Приглушення металевого блиску: менша сила відбиття envMap + мінімальна шорсткість.
-const REFLECTION = { envMapIntensity: 0.6, minRoughness: 0.4 };
+// Матеріали: делікатне відбиття оточення + вища мінімальна шорсткість, щоб дерево було
+// матовим і природним (без глянцевих «бардових» відблисків), а метал — не «дешевим».
+const ENV_MAP_INTENSITY = 0.5;
+const MIN_ROUGHNESS = 0.65;
 
-type SlotTune = {
-  /** Screen-roll для розрахунку contain-габаритів (репрезентативний кут). */
-  rollZ: number;
-  scaleMult: number;
-  /** Зсув по X (частка ширини в'юпорту, + = праворуч). */
-  offsetXFrac: number;
+// Нижче цієї ширини (px) — телефон: АКМ по центру, без бокового зсуву.
+const MOBILE_MAX_WIDTH = 600;
+
+const SLOT: Record<AkmSlotKey, { scaleMult: number; offsetXFrac: number }> = {
+  features: { scaleMult: 3.5, offsetXFrac: 0.12 },
+  cta: { scaleMult: 1.9, offsetXFrac: 0 },
 };
 
-// TUNE. Features rollZ тут — лише для фіту (реальний оберт керується choreo.akmRollZ покроково).
-const SLOT_TUNE: Record<AkmSlotKey, SlotTune> = {
-  features: { rollZ: -Math.PI / 12, scaleMult: 3.5, offsetXFrac: 0.12 },
-  cta: { rollZ: 0, scaleMult: 1.9, offsetXFrac: 0 },
-};
-
-type Target = { x: number; y: number; scale: number };
+type Placement = { x: number; y: number; scale: number };
 
 const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
-  const group = useRef<Group>(null);
-  const inner = useRef<Group>(null);
+  const root = useRef<Group>(null);
+  const model = useRef<Group>(null);
   const { scene, animations } = useGLTF(MODEL_URL);
-  const { actions, mixer } = useAnimations(animations, inner);
+  const { actions, mixer } = useAnimations(animations, model);
   const { camera, size } = useThree();
 
-  const ndc = useMemo(() => new Vector3(), []);
+  const projected = useMemo(() => new Vector3(), []);
 
-  const base = useMemo(() => {
+  // Центр моделі (для рецентрування) + її екранний слід у позі FACING (для contain-фіту).
+  const geometry = useMemo(() => {
     const box = new Box3().setFromObject(scene);
-    const center = new Vector3();
-    box.getCenter(center);
-    return { box, center };
+    const pivot = box.getCenter(new Vector3());
+
+    const facing = new Euler(...FACING);
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const x of [box.min.x, box.max.x]) {
+      for (const y of [box.min.y, box.max.y]) {
+        for (const z of [box.min.z, box.max.z]) {
+          const corner = new Vector3(
+            x - pivot.x,
+            y - pivot.y,
+            z - pivot.z,
+          ).applyEuler(facing);
+          minX = Math.min(minX, corner.x);
+          maxX = Math.max(maxX, corner.x);
+          minY = Math.min(minY, corner.y);
+          maxY = Math.max(maxY, corner.y);
+        }
+      }
+    }
+    return { pivot, footprint: { w: maxX - minX || 1, h: maxY - minY || 1 } };
   }, [scene]);
 
-  // Приглушуємо надто «дешевий» металевий блиск на матеріалах АКМ.
+  // Пом'якшуємо метал на матеріалах моделі.
   useEffect(() => {
-    scene.traverse((o) => {
-      const mesh = o as Mesh;
+    scene.traverse((object) => {
+      const mesh = object as Mesh;
       if (!mesh.isMesh) return;
-      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      for (const m of mats) {
-        const mat = m as MeshStandardMaterial;
-        if ("envMapIntensity" in mat) mat.envMapIntensity = REFLECTION.envMapIntensity;
-        if ("roughness" in mat && mat.roughness < REFLECTION.minRoughness) {
-          mat.roughness = REFLECTION.minRoughness;
-        }
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const material of materials) {
+        const std = material as MeshStandardMaterial;
+        if ("envMapIntensity" in std) std.envMapIntensity = ENV_MAP_INTENSITY;
+        if ("roughness" in std && std.roughness < MIN_ROUGHNESS)
+          std.roughness = MIN_ROUGHNESS;
       }
     });
   }, [scene]);
 
-  // Екранні габарити моделі під кожен слот (FACING + rollZ) — для contain-фіту.
-  const extents = useMemo(() => {
-    const { min, max } = base.box;
-    const c = base.center;
-    const corners = [
-      [min.x, min.y, min.z],
-      [max.x, min.y, min.z],
-      [min.x, max.y, min.z],
-      [max.x, max.y, min.z],
-      [min.x, min.y, max.z],
-      [max.x, min.y, max.z],
-      [min.x, max.y, max.z],
-      [max.x, max.y, max.z],
-    ];
-    const calc = (rollZ: number) => {
-      const fe = new Euler(FACING[0], FACING[1], FACING[2]);
-      const ze = new Euler(0, 0, rollZ);
-      let minX = Infinity;
-      let maxX = -Infinity;
-      let minY = Infinity;
-      let maxY = -Infinity;
-      for (const [x, y, z] of corners) {
-        const v = new Vector3(x - c.x, y - c.y, z - c.z)
-          .applyEuler(fe)
-          .applyEuler(ze);
-        minX = Math.min(minX, v.x);
-        maxX = Math.max(maxX, v.x);
-        minY = Math.min(minY, v.y);
-        maxY = Math.max(maxY, v.y);
-      }
-      return { w: maxX - minX || 1, h: maxY - minY || 1 };
-    };
-    return {
-      features: calc(SLOT_TUNE.features.rollZ),
-      cta: calc(SLOT_TUNE.cta.rollZ),
-    };
-  }, [base]);
-
-  const applyClip = (clip: AkmClip, scrub: number, delta: number) => {
-    const target = actions[clip];
-    if (!target) return;
+  // idle — циклічно; diassemble/assemble — скрабимо (ставимо час кадру вручну за прогресом).
+  const playClip = (clip: AkmClip, scrub: number, delta: number) => {
+    const action = actions[clip];
+    if (!action) return;
 
     for (const name in actions) {
-      const a = actions[name];
-      if (a && a !== target) a.stop();
+      const other = actions[name];
+      if (other && other !== action) other.stop();
     }
 
     if (clip === "idle") {
-      target.setLoop(LoopRepeat, Infinity);
-      target.clampWhenFinished = false;
-      target.paused = false;
-      if (!target.isRunning()) target.reset().play();
+      action.setLoop(LoopRepeat, Infinity);
+      action.clampWhenFinished = false;
+      action.paused = false;
+      if (!action.isRunning()) action.reset().play();
       mixer.update(delta);
     } else {
-      target.setLoop(LoopOnce, 1);
-      target.clampWhenFinished = true;
-      target.enabled = true;
-      target.play();
-      target.paused = true;
-      target.time = Math.max(0, Math.min(1, scrub)) * target.getClip().duration;
+      action.setLoop(LoopOnce, 1);
+      action.clampWhenFinished = true;
+      action.enabled = true;
+      action.paused = true;
+      action.play();
+      action.time = clamp01(scrub) * action.getClip().duration;
       mixer.update(0);
     }
   };
 
-  useFrame((_, delta) => {
-    const g = group.current;
-    const inr = inner.current;
-    if (!g || !inr) return;
+  // Позиція+масштаб під бокс слота (площина z = 0). null, якщо DOM-бокс відсутній.
+  const placeInSlot = (
+    slot: AkmSlotKey,
+    worldPerPx: number,
+  ): Placement | null => {
+    const element = document.getElementById(AKM_SLOT_ID[slot]);
+    if (!element) return null;
 
-    const c = choreoRef.current;
-    if (!c.akmVisible) {
-      g.visible = false;
+    const rect = element.getBoundingClientRect();
+    const { scaleMult, offsetXFrac } = SLOT[slot];
+    const shiftX = size.width > MOBILE_MAX_WIDTH ? offsetXFrac : 0;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    return {
+      x:
+        (centerX - size.width / 2) * worldPerPx +
+        shiftX * size.width * worldPerPx,
+      y: (size.height / 2 - centerY) * worldPerPx,
+      scale:
+        Math.min(
+          (rect.width * worldPerPx) / geometry.footprint.w,
+          (rect.height * worldPerPx) / geometry.footprint.h,
+        ) * scaleMult,
+    };
+  };
+
+  useFrame((_, delta) => {
+    const group = root.current;
+    if (!group) return;
+
+    const choreo = choreoRef.current;
+    if (!choreo.akmVisible) {
+      group.visible = false;
       return;
     }
 
-    const cam = camera as PerspectiveCamera;
+    const camera3d = camera as PerspectiveCamera;
     const worldPerPx =
-      (2 * Math.tan((cam.fov * Math.PI) / 180 / 2) * cam.position.z) /
+      (2 * Math.tan((camera3d.fov * Math.PI) / 180 / 2) * camera3d.position.z) /
       size.height;
 
-    const slotTarget = (slot: AkmSlotKey): Target | null => {
-      const el = document.getElementById(AKM_SLOT_ID[slot]);
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      const tune = SLOT_TUNE[slot];
-      const ext = extents[slot];
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      // На телефоні (≤600px) offset = 0 → АКМ по центру по горизонталі.
-      const offX = size.width > 600 ? tune.offsetXFrac : 0;
-      return {
-        x: (cx - size.width / 2) * worldPerPx + offX * size.width * worldPerPx,
-        y: (size.height / 2 - cy) * worldPerPx,
-        scale:
-          Math.min(
-            (r.width * worldPerPx) / ext.w,
-            (r.height * worldPerPx) / ext.h,
-          ) * tune.scaleMult,
-      };
-    };
+    const fromFeatures = placeInSlot("features", worldPerPx);
+    const toCta = placeInSlot("cta", worldPerPx);
+    const flight = smoothstep(clamp01(choreo.akmFlow));
 
-    const fT = slotTarget("features");
-    const cT = slotTarget("cta");
-    const flow = clamp01(c.akmFlow);
-    const e = smooth(flow);
-
-    // Орієнтація: у Features керується покроково (yaw/pitch/roll), при перельоті → до CTA (0,0,0).
-    const yaw = lerp(c.akmYaw, 0, e);
-    const pitch = lerp(c.akmPitch, 0, e);
-    const roll = lerp(c.akmRollZ, 0, e);
-
-    let t: Target;
-    if (fT && cT) {
-      t = {
-        x: lerp(fT.x, cT.x, e),
-        y: lerp(fT.y, cT.y, e),
-        scale: lerp(fT.scale, cT.scale, e),
+    let placement: Placement | null;
+    if (fromFeatures && toCta) {
+      placement = {
+        x: lerp(fromFeatures.x, toCta.x, flight),
+        y: lerp(fromFeatures.y, toCta.y, flight),
+        scale: lerp(fromFeatures.scale, toCta.scale, flight),
       };
     } else {
-      const only = fT ?? cT;
-      if (!only) {
-        g.visible = false;
-        return;
-      }
-      t = only;
+      placement = fromFeatures ?? toCta;
+    }
+    if (!placement) {
+      group.visible = false;
+      return;
     }
 
-    inr.rotation.set(FACING[0], FACING[1], FACING[2]);
-    g.position.set(t.x, t.y, 0);
-    g.scale.setScalar(t.scale);
-    g.rotation.set(pitch, yaw, roll);
+    // Поза «інспекції» у Features → рівна горизонталь у CTA (по мірі перельоту).
+    group.position.set(placement.x, placement.y, 0);
+    group.scale.setScalar(placement.scale);
+    group.rotation.set(
+      lerp(choreo.akmPitch, 0, flight),
+      lerp(choreo.akmYaw, 0, flight),
+      0,
+    );
 
-    // Видимість — за фактичною екранною позицією (щоб було видно переліт).
-    ndc.copy(g.position).project(cam);
-    g.visible = Math.abs(ndc.x) < 1.5 && Math.abs(ndc.y) < 1.5 && ndc.z < 1;
+    // Показуємо лише коли модель реально у в'юпорті (щоб було видно переліт).
+    projected.copy(group.position).project(camera3d);
+    group.visible =
+      Math.abs(projected.x) < 1.5 &&
+      Math.abs(projected.y) < 1.5 &&
+      projected.z < 1;
 
-    applyClip(c.akmClip, c.akmScrub, delta);
+    playClip(choreo.akmClip, choreo.akmScrub, delta);
   });
 
   return (
-    <group ref={group} visible={false}>
-      <group ref={inner}>
+    <group ref={root} visible={false}>
+      <group ref={model} rotation={FACING}>
         <primitive
           object={scene}
-          position={[-base.center.x, -base.center.y, -base.center.z]}
+          position={[-geometry.pivot.x, -geometry.pivot.y, -geometry.pivot.z]}
         />
       </group>
     </group>

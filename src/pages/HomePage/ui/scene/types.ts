@@ -16,10 +16,9 @@ export type Choreo = {
   akmClip: AkmClip;
   /** 0..1 — позиція в межах кліпу (для скрабу diassemble/assemble). */
   akmScrub: number;
-  /** Орієнтація АКМ у Features (радіани): yaw (доворот), pitch (нахил зверху), roll (у площині). */
+  /** Орієнтація «інспекції» АКМ у Features (радіани): доворот та нахил зверху. */
   akmYaw: number;
   akmPitch: number;
-  akmRollZ: number;
 };
 
 export const createChoreo = (): Choreo => ({
@@ -31,7 +30,6 @@ export const createChoreo = (): Choreo => ({
   akmScrub: 0,
   akmYaw: 0,
   akmPitch: 0,
-  akmRollZ: 0,
 });
 
 // id DOM-слотів, до боксів яких вписується АКМ (мають збігатися з розміткою секцій).

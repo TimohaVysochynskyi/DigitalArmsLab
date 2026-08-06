@@ -1,0 +1,49 @@
+.container {
+  width: 100%;
+  height: 100%;
+  padding: 40px 80px 120px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.error {
+  font-family: "FixelText-Medium";
+  font-size: 18px;
+  color: var(--accent-light-color);
+}
+
+/* Перемикач десктоп/мобайл: обидва рендеряться, видимість вирішує лише CSS. */
+.categoryList {
+  display: block;
+}
+.categoryDropdown {
+  display: none;
+}
+
+/**** RESPONSIVE ****/
+
+@media screen and (max-width: 1024px) {
+  .container {
+    padding: 0 80px 48px 80px;
+  }
+  .categoryList {
+    display: none;
+  }
+  .categoryDropdown {
+    display: block;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .container {
+    padding: 0px 40px 48px 40px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .container {
+    padding: 0px 24px 48px 24px;
+  }
+}

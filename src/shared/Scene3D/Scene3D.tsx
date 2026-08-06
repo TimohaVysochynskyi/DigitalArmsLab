@@ -29,14 +29,17 @@ const Scene3D = ({ children }: Scene3DProps) => {
         dpr={[1, 2]}
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
         camera={{ position: [0, 0, 6], fov: 45 }}
+        onCreated={({ gl }) => {
+          gl.toneMappingExposure = 1.15; // легке підняття яскравості
+        }}
       >
         {/* М'яке загальне + делікатний теплий key + холодний fill. */}
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[5, 8, 6]} intensity={1.0} color="#fff3e6" />
-        <directionalLight position={[-6, 3, -3]} intensity={0.4} color="#cfdcff" />
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[5, 8, 6]} intensity={1.3} color="#fff4ea" />
+        <directionalLight position={[-6, 3, -3]} intensity={0.5} color="#e2ecff" />
 
         <Suspense fallback={null}>
-          {/* Студійне IBL: м'які площини-лайтформери → делікатні відблиски на металі. */}
+          {/* Студійне IBL: м'які майже нейтральні площини → делікатні відблиски без кольорового касту. */}
           <Environment resolution={256}>
             <Lightformer
               form="rect"
@@ -48,17 +51,17 @@ const Scene3D = ({ children }: Scene3DProps) => {
             />
             <Lightformer
               form="rect"
-              intensity={1.0}
+              intensity={0.9}
               position={[7, 2, 3]}
               scale={[5, 10, 1]}
-              color="#ffe6cc"
+              color="#fff3e8"
             />
             <Lightformer
               form="rect"
-              intensity={1.0}
+              intensity={0.9}
               position={[-7, 2, 3]}
               scale={[5, 10, 1]}
-              color="#cfdcff"
+              color="#eaf1ff"
             />
             <Lightformer
               form="rect"

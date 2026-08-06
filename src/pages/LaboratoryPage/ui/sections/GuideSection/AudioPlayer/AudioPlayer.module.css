@@ -1,0 +1,76 @@
+.player {
+  display: inline-flex;
+  padding: 4px 8px;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  background-color: transparent;
+  border: 1px solid var(--secondary-color);
+}
+
+.button {
+  width: 36px;
+  height: 36px;
+  aspect-ratio: 1/1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.icon {
+  width: 27px;
+  height: 27px;
+  aspect-ratio: 1/1;
+  fill: var(--accent-bright-color);
+  transition: 0.2s;
+}
+.button:hover .icon,
+.button:focus-visible .icon {
+  fill: var(--accent-light-color);
+}
+.button:active .icon {
+  fill: var(--accent-medium-color);
+}
+
+/* Висота і gap приходять інлайном із AudioPlayer.tsx. */
+.wave {
+  flex: 1 1 auto;
+  min-width: 70px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+.wave:focus-visible {
+  outline: 1px solid var(--accent-medium-color);
+  outline-offset: 4px;
+}
+
+.bar {
+  flex-shrink: 0;
+  background-color: var(--secondary-color);
+  transition: background-color 0.15s;
+}
+.barPlayed {
+  background-color: var(--accent-bright-color);
+}
+
+@media screen and (max-width: 600px) {
+  .player {
+    border: none;
+    padding: 0;
+  }
+  .wave {
+    display: none;
+  }
+  .button,
+  .icon {
+    width: 45px;
+    height: 45px;
+  }
+}

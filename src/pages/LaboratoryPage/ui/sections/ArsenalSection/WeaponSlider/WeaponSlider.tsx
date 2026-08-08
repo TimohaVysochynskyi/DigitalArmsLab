@@ -32,7 +32,7 @@ const WeaponSlider = ({ slider }: WeaponSliderProps) => {
           <svg
             className={css.arrow}
             viewBox="0 0 8 13"
-            fill="none"
+            fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
           >
             <path d="M7.1195 13L0 6.5L7.1195 0L8 0.815371L1.77358 6.5L8 12.1846L7.1195 13Z" />
@@ -67,7 +67,7 @@ const WeaponSlider = ({ slider }: WeaponSliderProps) => {
           <svg
             className={css.arrow}
             viewBox="0 0 8 13"
-            fill="none"
+            fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
           >
             <path d="M0.880503 13L8 6.5L0.880503 0L0 0.815371L6.22642 6.5L0 12.1846L0.880503 13Z" />

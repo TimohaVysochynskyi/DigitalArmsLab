@@ -1,0 +1,52 @@
+/* Стилі — за тобою. Класи-заготовки, щоб розмітка вже була підключена.
+   .drawerOpen — стан відкритого дравера (додається поверх .drawer). */
+.drawer {
+}
+
+.drawerOpen {
+}
+
+.header {
+}
+
+.title {
+}
+
+.meta {
+}
+
+.close {
+}
+
+.closeIcon {
+}
+
+.content {
+}
+
+.section {
+}
+
+.sectionTitle {
+}
+
+.text {
+}
+
+.specs {
+}
+
+.spec {
+}
+
+.specAspect {
+}
+
+.specValue {
+}
+
+.sources {
+}
+
+.source {
+}

@@ -62,7 +62,11 @@
 - ArsenalSection: дані — фіча `features/arsenal` (model/services/hooks, mock: 4 категорії × 2 одиниці, картинки тимчасово akms). Логіка — `useArsenalSlider`: стрілки рухають вибір на 1 картку, трек зсувається на сторінку лише коли вибір вийшов за видиме вікно. Розмір вікна = `--visible-slides` (читається з CSS через `getComputedStyle`); ширина картки за замовчуванням рахується з нього так, щоб слайдер зайняв усю доступну ширину, а `--slide-width` (за замовчуванням `initial`) — необовʼязкове перекриття через `var(--slide-width, …)`. Зсув береться з `offsetLeft` картки. Безкінечність — список ×3 копії + безшовний стрибок у середню після transitionend.
 - Вибір категорії: `CategoryList` (десктопна стрічка; зсув миттєвий і рівно на потрібну величину, градієнт `pointer-events:none` стоїть на тому краю, за який виїхали кнопки; `contain:inline-size` на `.strip`, щоб кнопки не роздували min-content сторінки) і `CategoryDropdown` (мобільний, розкриття через `grid-template-rows 0fr→1fr`). Обидва рендеряться завжди з однаковими пропсами, перемикання — класами `.categoryList`/`.categoryDropdown` в `ArsenalSection.module.css`.
 
+- Фіча `arsenal` доповнена: `Weapon.modelUrl` (тимчасово akm.opt.glb для всього, крім дронів), `WeaponDetails` (опис/ТТХ/принцип роботи/джерела) у `weapon-details.mock.ts`, `getWeaponDetail(id)` + `useWeaponDetail(id)`. Активна картка слайдера — `<Link>` на `/lab/:weaponId`.
+- Спільне 3D: `shared/Scene3D` експортує ще `StudioEnvironment` (світло+IBL, спільне для сцен) і `tuneMaterials` (envMapIntensity/мін. roughness).
+
 Частково (перший прохід, потребує тюнінгу наживо):
+- ScenePage (`/lab/:weaponId`): `WeaponViewer` — власний (не overlay) `<Canvas>` з подіями миші: `WeaponModel` (glb нормалізується bounding-сферою до `MODEL_RADIUS` і центрується, доворот з `MODEL_FACING`, тогл розбирання = кліп `diassemble`/`assemble` один раз із `clampWhenFinished`; якщо кліпу збирання нема — розбирання у зворотному напрямку) + `ViewControls` (OrbitControls без пану, зум у межах fit-дистанції; скидання виду — плавний переліт у сферичних координатах за `RESET_DURATION`, далі автообертання; ручний pointerdown його зупиняє). Тюнити: `viewer.config.ts`. Стан UI — `useSceneControls`. Решта UI: `SceneToolbar` (?, скид виду, розбирання), `WeaponCaption`, `WeaponInfoDrawer` (Esc, `inert` у закритому стані). CSS цих компонентів — заготовки класів, стилі за користувачем.
 - 3D HomePage: `shared/Scene3D` (fixed overlay, z-index −1, dpr [1,2], IBL через `<Environment>`+Lightformers) + `pages/HomePage/ui/scene/` (DroneModel, AkmModel, HomeScene, useHomeChoreography, math, types). Оркестрація — GSAP ScrollTrigger у HomePage; спільний мутабельний `Choreo` (без ре-рендерів) + `featuresStep` (React-стан для картки).
   - Дрон: Hero(центр, на нас)→About(вправо, поворот вліво) + легкий ховер; без зашитих анімацій.
   - АКМ: одна модель, трекінг DOM-бокса слота (`#akm-slot-features` / `#akm-slot-cta` — замість колишніх картинок akms). Features пін на 3 кроки: картка 01/02/03 + кліпи `idle`/`diassemble`/`assemble` (скраб скролом). CTA — профіль, idle.
@@ -70,7 +74,8 @@
   - Тюнити наживо: `SLOT_TUNE` (AkmModel), `DRONE_TUNE` (DroneModel).
 
 Не готово / далі:
-- 3D: тюнінг позицій/обертів; `<Environment>` для відблисків металу (АКМ) — ще не додано; стиснення важких glb (drone 16 МБ / akm 12 МБ); перф (frameloop `always` → пауза поза екраном); код-спліт 3D-чанка.
+- 3D: тюнінг позицій/обертів; стиснення важких glb (drone 16 МБ / akm 12 МБ); перф (frameloop `always` → пауза поза екраном).
+- ScenePage: реальні glb під кожну одиницю; взаємодія з окремими частинами моделі (підсвітка/клік).
 - Секції HomePage — у процесі верстки.
 
 ## Правила роботи

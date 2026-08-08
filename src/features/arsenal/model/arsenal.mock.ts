@@ -1,4 +1,4 @@
-/* Картинки тимчасові — підміни, коли зʼявляться реальні рендери зброї. */
+/* Картинки та моделі тимчасові — підміни, коли зʼявляться реальні рендери й glb. */
 
 import type { ArsenalData } from "./arsenal.types";
 
@@ -10,6 +10,9 @@ import f1 from "@/assets/images/weapons/f1.webp";
 import m67 from "@/assets/images/weapons/m67.webp";
 import fpv from "@/assets/images/weapons/fpv.webp";
 import mavic from "@/assets/images/weapons/mavic.webp";
+
+const AKM_MODEL = "/models/akm.opt.glb";
+const DRONE_MODEL = "/models/drone.opt.glb";
 
 export const ARSENAL_MOCK_DATA: ArsenalData = {
   categories: [
@@ -26,6 +29,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "СРСР",
       year: 1954,
       image: akmImage,
+      modelUrl: AKM_MODEL,
     },
     {
       id: "ar15",
@@ -34,6 +38,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "США",
       year: 1958,
       image: ar15,
+      modelUrl: AKM_MODEL,
     },
     {
       id: "makarov",
@@ -42,6 +47,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "СРСР",
       year: 1949,
       image: makarov,
+      modelUrl: AKM_MODEL,
     },
     {
       id: "beretta-92",
@@ -50,6 +56,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "Італія",
       year: 1975,
       image: beretta,
+      modelUrl: AKM_MODEL,
     },
     {
       id: "f-1",
@@ -58,6 +65,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "СРСР",
       year: 1939,
       image: f1,
+      modelUrl: AKM_MODEL,
     },
     {
       id: "m67",
@@ -66,6 +74,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "США",
       year: 1968,
       image: m67,
+      modelUrl: AKM_MODEL,
     },
     {
       id: "fpv",
@@ -74,6 +83,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "Україна",
       year: 2022,
       image: fpv,
+      modelUrl: DRONE_MODEL,
     },
     {
       id: "mavic",
@@ -82,6 +92,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "Китай",
       year: 2021,
       image: mavic,
+      modelUrl: DRONE_MODEL,
     },
   ],
 };

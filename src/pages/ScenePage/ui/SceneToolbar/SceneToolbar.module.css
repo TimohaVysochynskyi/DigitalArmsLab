@@ -1,0 +1,58 @@
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.button {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--secondary-light-color);
+  background-color: transparent;
+  color: var(--white-color);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+.icon {
+  width: 18px;
+  height: 18px;
+}
+.button:hover {
+  border-color: var(--accent-light-color);
+  box-shadow: 0 0 6.8px 0 var(--accent-extralight-color);
+  color: var(--accent-extralight-color);
+}
+.button:active {
+  border-color: var(--accent-medium-color);
+  box-shadow: none;
+  color: var(--accent-light-color);
+}
+.button:focus {
+  border-color: var(--accent-light-color);
+  box-shadow: none;
+  color: var(--accent-extralight-color);
+}
+.button:disabled {
+  border-color: var(--secondary-dark-color);
+  box-shadow: none;
+  cursor: not-allowed;
+  color: var(--secondary-color);
+}
+
+/**** RESPONSIVE ****/
+
+@media screen and (max-width: 600px) {
+  .button {
+    width: 36px;
+    height: 36px;
+  }
+  .icon {
+    width: 14px;
+    height: 14px;
+  }
+}

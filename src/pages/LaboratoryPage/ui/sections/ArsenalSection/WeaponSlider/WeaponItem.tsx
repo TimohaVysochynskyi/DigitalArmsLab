@@ -1,4 +1,5 @@
-import { memo } from "react";
+import { memo, type MouseEvent } from "react";
+import { Link } from "react-router-dom";
 
 import type { Weapon } from "@/features/arsenal";
 
@@ -11,32 +12,40 @@ type Props = {
   onSelect: (index: number) => void;
 };
 
+/* Картка завжди <a> (а не <a>/<button> залежно від стану): зміна типу елемента
+   перемонтовує вузол, і CSS-перехід активної/неактивної картки не встигає програтись.
+   Клік по неактивній лише перемикає вибір, перехід на сцену — тільки з активної. */
 const WeaponItem = ({
-  weapon: { name, country, year, image },
+  weapon: { id, name, country, year, image },
   index,
   isActive,
   onSelect,
 }: Props) => {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (isActive) return;
+
+    event.preventDefault();
+    onSelect(index);
+  };
+
   return (
-    <>
-      <button
-        type="button"
-        className={`${css.slide} ${isActive ? "" : css.slideInactive}`}
-        onClick={() => onSelect(index)}
-        aria-current={isActive}
-        tabIndex={isActive ? 0 : -1}
-      >
-        <img src={image} alt={name} className={css.weaponImage} />
-        <div className={css.weaponDescription}>
-          <p className={css.weaponTitle}>{name}</p>
-          <p className={css.weaponSubtitle}>
-            {country}
-            <br />
-            {year}
-          </p>
-        </div>
-      </button>
-    </>
+    <Link
+      to={`/lab/${id}`}
+      className={`${css.slide} ${isActive ? "" : css.slideInactive}`}
+      onClick={handleClick}
+      aria-current={isActive}
+      tabIndex={isActive ? 0 : -1}
+    >
+      <img src={image} alt={name} className={css.weaponImage} />
+      <div className={css.weaponDescription}>
+        <p className={css.weaponTitle}>{name}</p>
+        <p className={css.weaponSubtitle}>
+          {country}
+          <br />
+          {year}
+        </p>
+      </div>
+    </Link>
   );
 };
 

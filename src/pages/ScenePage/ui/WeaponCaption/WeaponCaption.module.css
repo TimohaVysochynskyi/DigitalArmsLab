@@ -1,0 +1,32 @@
+.caption {
+  width: 420px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 44px;
+  font-family: "FixelDisplay-Regular";
+  color: var(--white-color);
+}
+
+.meta {
+  font-size: 20px;
+  font-family: "FixelText-Regular";
+  line-height: 120%;
+  color: var(--white-color);
+  text-align: right;
+}
+
+/**** RESPONSIVE ****/
+
+@media screen and (max-width: 600px) {
+  .caption {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+  .meta {
+    text-align: left;
+  }
+}

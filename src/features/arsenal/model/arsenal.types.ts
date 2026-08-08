@@ -12,6 +12,26 @@ export type Weapon = {
   country: string;
   year: number;
   image: string;
+  /** Шлях до .glb у /public/models. */
+  modelUrl: string;
+};
+
+export type WeaponSpec = {
+  aspect: string;
+  value: string;
+};
+
+export type WeaponDetails = {
+  /** Короткий опис; порожній рядок — секцію не показуємо. */
+  summary: string;
+  /** Принцип роботи. */
+  operation: string;
+  specs: WeaponSpec[];
+  sources: string[];
+};
+
+export type WeaponDetail = Weapon & {
+  details: WeaponDetails;
 };
 
 export type ArsenalData = {

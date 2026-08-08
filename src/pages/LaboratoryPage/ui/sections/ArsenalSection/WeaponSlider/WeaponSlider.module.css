@@ -49,40 +49,34 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  color: var(--white-color);
   transition: 0.2s;
 }
 .arrow {
   width: 9px;
   aspect-ratio: 9/13;
-  fill: var(--white-color);
   transition: 0.2s;
 }
 .arrowButton:hover {
   border-color: var(--accent-light-color);
   box-shadow: 0 0 6.8px 0 var(--accent-extralight-color);
-}
-.arrowButton:hover .arrow,
-.arrowButton:focus .arrow {
-  fill: var(--accent-extralight-color);
+  color: var(--accent-extralight-color);
 }
 .arrowButton:active {
   border-color: var(--accent-medium-color);
   box-shadow: none;
-}
-.arrowButton:active .arrow {
-  fill: var(--accent-light-color);
+  color: var(--accent-light-color);
 }
 .arrowButton:focus {
   border-color: var(--accent-light-color);
   box-shadow: none;
+  color: var(--accent-extralight-color);
 }
 .arrowButton:disabled {
   border-color: var(--secondary-dark-color);
   box-shadow: none;
   cursor: not-allowed;
-}
-.arrowButton:disabled .arrow {
-  fill: var(--secondary-color);
+  color: var(--secondary-color);
 }
 
 .slide {
@@ -106,10 +100,11 @@
   flex-direction: column;
   justify-content: space-between;
 
-  /* скидання дефолтів button */
+  /* скидання дефолтів посилання */
   font: inherit;
   color: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   outline: none;
 

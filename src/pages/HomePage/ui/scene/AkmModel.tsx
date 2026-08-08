@@ -16,12 +16,11 @@ import {
   Vector3,
   Euler,
   Group,
-  Mesh,
-  MeshStandardMaterial,
   PerspectiveCamera,
   LoopOnce,
   LoopRepeat,
 } from "three";
+import { tuneMaterials } from "@/shared/Scene3D";
 import type { AkmClip, AkmSlotKey, Choreo } from "./types";
 import { AKM_SLOT_ID } from "./types";
 import { clamp01, lerp, smoothstep } from "./math";
@@ -86,18 +85,9 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
 
   // Пом'якшуємо метал на матеріалах моделі.
   useEffect(() => {
-    scene.traverse((object) => {
-      const mesh = object as Mesh;
-      if (!mesh.isMesh) return;
-      const materials = Array.isArray(mesh.material)
-        ? mesh.material
-        : [mesh.material];
-      for (const material of materials) {
-        const std = material as MeshStandardMaterial;
-        if ("envMapIntensity" in std) std.envMapIntensity = ENV_MAP_INTENSITY;
-        if ("roughness" in std && std.roughness < MIN_ROUGHNESS)
-          std.roughness = MIN_ROUGHNESS;
-      }
+    tuneMaterials(scene, {
+      envMapIntensity: ENV_MAP_INTENSITY,
+      minRoughness: MIN_ROUGHNESS,
     });
   }, [scene]);
 

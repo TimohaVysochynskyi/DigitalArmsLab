@@ -1,0 +1,22 @@
+/* Лише геометрія контейнера сцени — розміри задає батьківський блок сторінки. */
+.viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* без цього на тачі жест обертання конфліктує зі скролом сторінки */
+  touch-action: none;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}

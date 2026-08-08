@@ -3,6 +3,29 @@
   width: 100%;
   /* max-width: 380px; */
   align-self: stretch;
+  z-index: 10;
+}
+
+/* Затемнення сторінки під відкритим списком: від 8px над дропдауном до низу екрана.
+   top приходить інлайном — рахується з позиції дропдауна. */
+.backdrop {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 20, 20, 0.35) 0%,
+    #141414 100%
+  );
+}
+.backdropOpen {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .trigger {
@@ -107,4 +130,9 @@
   background-color: var(--accent-secondary-color);
   border-color: var(--accent-light-color);
   color: var(--accent-extralight-color);
+}
+
+/**** RESPONSIOVE ****/
+
+@media screen and (max-width: 600px) {
 }

@@ -1,23 +1,34 @@
 .slider {
-  --slide-width: 350px;
+  /* initial = не задано: ширина слайда рахується з --visible-slides так, щоб слайдер
+     зайняв усю доступну ширину. Задай значення (тут або в медіа) — воно переважить. */
+  --slide-width: initial;
   --slide-gap: 24px;
   --visible-slides: 2;
 
-  display: flex;
+  width: 100%;
+  display: grid;
+  /* minmax(0, 1fr) = «вся решта місця, ніколи по вмісту». Ширина в'юпорта стає
+     визначеною, тож відсотки слайдів мають від чого рахуватись, а вміст треку не
+     може розсунути ні слайдер, ні сторінку. */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 24px;
+
+  position: relative;
+  z-index: 2;
 }
 
 .viewport {
-  flex: 0 0 auto;
+  min-width: 0;
   overflow: hidden;
-  width: calc(
-    var(--visible-slides) * var(--slide-width) + (var(--visible-slides) - 1) *
-      var(--slide-gap)
+  max-width: calc(
+    var(--visible-slides) * var(--slide-width, 100%) +
+      (var(--visible-slides) - 1) * var(--slide-gap)
   );
 }
 
 .track {
+  width: 100%;
   display: flex;
   align-items: flex-start;
   gap: var(--slide-gap);
@@ -32,7 +43,6 @@
   flex-shrink: 0;
   width: 48px;
   height: 48px;
-  padding: 12px 14px;
   border: 1px solid var(--secondary-light-color);
   background-color: transparent;
   cursor: pointer;
@@ -43,7 +53,7 @@
 }
 .arrow {
   width: 9px;
-  height: 13px;
+  aspect-ratio: 9/13;
   fill: var(--white-color);
   transition: 0.2s;
 }
@@ -76,10 +86,18 @@
 }
 
 .slide {
-  width: var(--slide-width);
+  /* Фолбек ділить в'юпорт (track має width: 100%) на --visible-slides рівних карток. */
+  width: var(
+    --slide-width,
+    calc(
+      (100% - (var(--visible-slides) - 1) * var(--slide-gap)) /
+        var(--visible-slides)
+    )
+  );
   height: 100%;
 
   flex-shrink: 0;
+  min-width: 0;
   border: 1px solid var(--accent-light-color);
   background-color: rgba(50, 50, 50, 0.5);
   padding: 24px;
@@ -140,17 +158,13 @@
 /**** RESPONSIVE ****/
 
 @media screen and (max-width: 1600px) {
-  .slider {
-    --slide-width: 320px;
-  }
   .track {
     height: 365px;
   }
 }
 
-@media screen and (max-width: 1340px) {
+@media screen and (max-width: 1360px) {
   .slider {
-    --slide-width: 580px;
     --visible-slides: 1;
   }
   .slideInactive {
@@ -161,32 +175,24 @@
   }
 }
 
-@media screen and (max-width: 1280px) {
-  .slider {
-    --slide-width: 310px;
-  }
-}
-
-@media screen and (max-width: 1024px) {
-  .slider {
-    --slide-width: 580px;
-  }
-}
-
-@media screen and (max-width: 900px) {
-  .slider {
-    --slide-width: 450px;
-  }
-}
-
-@media screen and (max-width: 768px) {
-  .slider {
-    --slide-width: 360px;
-  }
-}
-
 @media screen and (max-width: 600px) {
   .slider {
-    --slide-width: 220px;
+    gap: 12px;
+  }
+  .slide {
+    padding: 24px 16px;
+  }
+  .weaponTitle {
+    font-size: 20px;
+  }
+  .weaponSubtitle {
+    font-size: 16px;
+  }
+  .arrowButton {
+    width: 36px;
+    height: 36px;
+  }
+  .arrow {
+    width: 7px;
   }
 }

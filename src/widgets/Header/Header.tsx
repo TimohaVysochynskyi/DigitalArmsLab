@@ -3,8 +3,13 @@ import { Link } from "react-router-dom";
 import css from "./Header.module.css";
 import NavigationLink from "@/shared/NavigationLink";
 import MobileMenu from "./MobileMenu";
+import type { AccentLink } from "../layout.config";
 
-const Header = () => {
+type HeaderProps = {
+  accentLink: AccentLink;
+};
+
+const Header = ({ accentLink }: HeaderProps) => {
   return (
     <>
       <header className={css.headerWrapper}>
@@ -34,11 +39,11 @@ const Header = () => {
                 <NavigationLink to="#contact">Зв'яжіться з нами</NavigationLink>
               </li>
             </ul>
-            <NavigationLink to="/lab" accent>
-              Лабораторія
+            <NavigationLink to={accentLink.to} accent>
+              {accentLink.label}
             </NavigationLink>
           </nav>
-          <MobileMenu />
+          <MobileMenu accentLink={accentLink} />
         </div>
       </header>
     </>

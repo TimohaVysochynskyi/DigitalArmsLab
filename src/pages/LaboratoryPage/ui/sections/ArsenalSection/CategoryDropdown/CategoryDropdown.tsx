@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { WeaponCategory, WeaponCategoryId } from "@/features/arsenal";
 
 import css from "./CategoryDropdown.module.css";
+
+/** Наскільки затемнення виступає над дропдауном. */
+const BACKDROP_OFFSET = 8;
 
 type CategoryDropdownProps = {
   categories: WeaponCategory[];
@@ -18,6 +21,7 @@ const CategoryDropdown = ({
   className,
 }: CategoryDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [backdropTop, setBackdropTop] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const activeCategory = categories.find(
@@ -43,6 +47,32 @@ const CategoryDropdown = ({
     };
   }, [isOpen]);
 
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    const update = () => {
+      const root = rootRef.current;
+      if (!root) return;
+
+      // offsetParent зникає, коли дропдаун сховала медіа-квері.
+      if (!root.offsetParent) {
+        setIsOpen(false);
+        return;
+      }
+
+      setBackdropTop(root.getBoundingClientRect().top - BACKDROP_OFFSET);
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [isOpen]);
+
   const handleSelect = (categoryId: WeaponCategoryId) => {
     onSelect(categoryId);
     setIsOpen(false);
@@ -50,6 +80,12 @@ const CategoryDropdown = ({
 
   return (
     <>
+      <div
+        className={`${css.backdrop} ${isOpen ? css.backdropOpen : ""}`}
+        style={{ top: backdropTop }}
+        aria-hidden="true"
+      />
+
       <div ref={rootRef} className={`${css.dropdown} ${className ?? ""}`}>
         <button
           type="button"

@@ -86,8 +86,13 @@ export const useArsenalSlider = (data: ArsenalData | null): ArsenalSlider => {
     const observer = new ResizeObserver(measure);
     observer.observe(viewport);
     observer.observe(track);
+    // Перемикання брейкпоінта могло змінити лише --visible-slides, без зміни розмірів.
+    window.addEventListener("resize", measure);
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, [position, total]);
 
   // Повернення в середню копію: анімація вимикається, щоб стрибок був непомітний.

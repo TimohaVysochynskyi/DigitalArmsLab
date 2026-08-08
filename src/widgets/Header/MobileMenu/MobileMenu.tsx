@@ -1,9 +1,14 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import NavigationLink from "@/shared/NavigationLink";
+import type { AccentLink } from "../../layout.config";
 import css from "./MobileMenu.module.css";
 
-const MobileMenu = () => {
+type MobileMenuProps = {
+  accentLink: AccentLink;
+};
+
+const MobileMenu = ({ accentLink }: MobileMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const close = () => setIsOpen(false);
@@ -93,12 +98,14 @@ const MobileMenu = () => {
           <div className={css.bodyTop}>
             <nav className={css.nav}>
               <ul className={css.primaryList}>
+                {accentLink.to !== "/" && (
+                  <li>
+                    <NavigationLink to="/">Головна</NavigationLink>
+                  </li>
+                )}
                 <li>
-                  <NavigationLink to="/">Головна</NavigationLink>
-                </li>
-                <li>
-                  <NavigationLink to="/lab" accent>
-                    Лабораторія
+                  <NavigationLink to={accentLink.to} accent>
+                    {accentLink.label}
                   </NavigationLink>
                 </li>
               </ul>

@@ -13,6 +13,7 @@ const LaboratoryPage = () => {
         <section className={css.arsenalWrapper}>
           <ArsenalSection />
         </section>
+        <div className={css.bgEffect} />
       </div>
     </>
   );

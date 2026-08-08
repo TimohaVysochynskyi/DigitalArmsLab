@@ -4,18 +4,43 @@
   display: flex;
   justify-content: center;
   padding-top: 60px;
+  position: relative;
+  overflow-y: hidden;
 }
+/* 38% від ширини сторінки: 580px тримається до ~1530px, далі рівномірно стискається
+   і впирається в 380px близько 1000px. Керується відсотком. */
 .guideWrapper {
+  width: clamp(380px, 38%, 580px);
+  flex-shrink: 0;
   min-width: 380px;
   max-width: 580px;
-  width: 100%;
   border-right: 1px solid var(--secondary-color);
   padding-bottom: 92px;
 }
+/* min-width: 0 — вміст арсеналу не має права виштовхувати колонку гіда. */
 .arsenalWrapper {
   flex: 1;
+  min-width: 0;
   max-width: 1400px;
   padding-bottom: 92px;
+}
+
+.bgEffect {
+  width: 75%;
+  min-width: 1000px;
+  aspect-ratio: 3/2;
+  border-radius: 100%;
+  opacity: 0.33;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    #a74e28 0%,
+    #4e210e 50%,
+    #141414 100%
+  );
+  position: absolute;
+  z-index: 1;
+  bottom: -25vw;
+  right: 0;
 }
 
 /**** RESPONSIVE ****/
@@ -24,10 +49,13 @@
   .container {
     flex-direction: column;
     gap: 82px;
+    height: auto;
+    min-height: 100vh;
   }
   .guideWrapper,
   .arsenalWrapper {
-    min-width: none;
+    width: 100%;
+    min-width: 0;
     max-width: none;
     padding: 0;
   }

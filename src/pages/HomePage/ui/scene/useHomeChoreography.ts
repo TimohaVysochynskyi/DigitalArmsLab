@@ -37,26 +37,61 @@ export const useHomeChoreography = (
       const choreo = choreoRef.current;
       let lastStep = -1;
 
-      // Дрон видимий, поки в'юпорт перетинає Hero..About.
-      ScrollTrigger.create({
-        trigger: "#hero",
-        start: "top bottom",
-        endTrigger: "#about",
-        end: "bottom top",
-        onToggle: (self) => {
-          choreo.droneVisible = self.isActive;
-        },
+      // --- Дрон: різна поведінка десктоп/мобайл (matchMedia авто-перебудовує на порозі 600) ---
+      const mm = gsap.matchMedia();
+
+      // Десктоп (>600): дрон летить у праву частину About і лишається з нею.
+      mm.add("(min-width: 601px)", () => {
+        ScrollTrigger.create({
+          trigger: "#hero",
+          start: "top bottom",
+          endTrigger: "#about",
+          end: "bottom top",
+          onToggle: (self) => {
+            choreo.droneVisible = self.isActive;
+          },
+        });
+        ScrollTrigger.create({
+          trigger: "#about",
+          start: "top bottom",
+          end: "top top",
+          scrub: SCRUB,
+          onUpdate: (self) => {
+            choreo.droneProgress = self.progress;
+          },
+        });
       });
 
-      // Політ дрона: Hero → About (завершується, поки About в'їжджає у в'юпорт).
-      ScrollTrigger.create({
-        trigger: "#about",
-        start: "top bottom",
-        end: "top top",
-        scrub: SCRUB,
-        onUpdate: (self) => {
-          choreo.droneProgress = self.progress;
-        },
+      // Мобайл (≤600): фаза 1 — спуск по центру через About; фаза 2 — доворот у вид згори
+      // в геп-зоні (#drone-gap). Видимий Hero..кінець гепа.
+      mm.add("(max-width: 600px)", () => {
+        ScrollTrigger.create({
+          trigger: "#hero",
+          start: "top bottom",
+          endTrigger: "#drone-gap",
+          end: "bottom top",
+          onToggle: (self) => {
+            choreo.droneVisible = self.isActive;
+          },
+        });
+        ScrollTrigger.create({
+          trigger: "#about",
+          start: "top bottom",
+          end: "top top",
+          scrub: SCRUB,
+          onUpdate: (self) => {
+            choreo.droneProgress = self.progress;
+          },
+        });
+        ScrollTrigger.create({
+          trigger: "#drone-gap",
+          start: "top bottom",
+          end: "center center",
+          scrub: SCRUB,
+          onUpdate: (self) => {
+            choreo.droneGap = self.progress;
+          },
+        });
       });
 
       // АКМ видимий у діапазоні Features..CTA.
@@ -125,6 +160,8 @@ export const useHomeChoreography = (
           choreo.akmClip = "idle";
         },
       });
+
+      return () => mm.revert();
     },
     { dependencies: [choreoRef, onFeaturesStep] },
   );

@@ -1,14 +1,15 @@
 /* Інтерактивна сцена однієї одиниці: власний <Canvas> (на відміну від глобального
    shared/Scene3D, тут потрібні події миші), спільне студійне світло, орбіта та кліпи. */
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 import { StudioEnvironment } from "@/shared/Scene3D";
 import Loader from "@/shared/Loader";
 import WeaponModel from "./WeaponModel";
 import ViewControls from "./ViewControls";
-import { CAMERA_FOV } from "./viewer.config";
+import { CAMERA_FAR, CAMERA_FOV, CAMERA_NEAR } from "./viewer.config";
+import type { ModelProjection } from "./viewer.math";
 import css from "./WeaponViewer.module.css";
 
 type WeaponViewerProps = {
@@ -32,6 +33,7 @@ const WeaponViewer = ({
   onUserInteract,
 }: WeaponViewerProps) => {
   const { active } = useProgress();
+  const [projection, setProjection] = useState<ModelProjection | null>(null);
 
   return (
     <div
@@ -46,7 +48,12 @@ const WeaponViewer = ({
           antialias: true,
           powerPreference: "high-performance",
         }}
-        camera={{ position: [0, 0, 5], fov: CAMERA_FOV, near: 0.1, far: 100 }}
+        camera={{
+          position: [0, 0, 5],
+          fov: CAMERA_FOV,
+          near: CAMERA_NEAR,
+          far: CAMERA_FAR,
+        }}
         onCreated={({ gl }) => {
           gl.toneMappingExposure = 1.15;
         }}
@@ -57,10 +64,15 @@ const WeaponViewer = ({
             url={modelUrl}
             isDisassembled={isDisassembled}
             onAssemblyAvailable={onAssemblyAvailable}
+            onMeasure={setProjection}
           />
         </Suspense>
 
-        <ViewControls autoRotate={autoRotate} resetSignal={resetSignal} />
+        <ViewControls
+          autoRotate={autoRotate}
+          resetSignal={resetSignal}
+          projection={projection}
+        />
       </Canvas>
 
       {active && (

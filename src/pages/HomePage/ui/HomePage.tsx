@@ -29,6 +29,8 @@ const HomePage = () => {
       <div className={css.gridZone}>
         <div className={css.bgGrid} />
         <AboutSection />
+        {/* Зона для top-down дрона між About і Features (лише ≤600; на десктопі height:0). */}
+        <div id="drone-gap" className={css.droneGap} aria-hidden="true" />
         <FeaturesSection step={featuresStep} />
         <CTASection />
       </div>

@@ -11,3 +11,14 @@
   background-repeat: repeat;
   pointer-events: none;
 }
+
+/* Порожня зона-стейдж для top-down дрона між About і Features.
+   Десктоп — 0 (не додає простору); ≤600 — власна адаптивна висота під розмір дрона. */
+.droneGap {
+  height: 0;
+}
+@media screen and (max-width: 600px) {
+  .droneGap {
+    height: min(72vw, 380px);
+  }
+}

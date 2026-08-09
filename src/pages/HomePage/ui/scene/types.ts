@@ -6,8 +6,10 @@
 export type AkmClip = "idle" | "diassemble" | "assemble";
 
 export type Choreo = {
-  /** 0 — дрон у Hero (центр), 1 — у About (зміщений праворуч). */
+  /** 0 — дрон у Hero (центр), 1 — у About (десктоп: праворуч; мобайл: спуск по центру). */
   droneProgress: number;
+  /** Лише мобайл (≤600): 0 — дрон у About, 1 — доворот у вид згори в геп-зоні між About і Features. */
+  droneGap: number;
   droneVisible: boolean;
   /** Чи показувати АКМ (діапазон Features..CTA). */
   akmVisible: boolean;
@@ -23,6 +25,7 @@ export type Choreo = {
 
 export const createChoreo = (): Choreo => ({
   droneProgress: 0,
+  droneGap: 0,
   droneVisible: true,
   akmVisible: false,
   akmFlow: 0,

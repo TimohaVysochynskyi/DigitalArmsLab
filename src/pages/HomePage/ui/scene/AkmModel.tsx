@@ -36,8 +36,22 @@ const FACING: [number, number, number] = [0, -Math.PI / 2, 0];
 const ENV_MAP_INTENSITY = 0.5;
 const MIN_ROUGHNESS = 0.65;
 
-// Нижче цієї ширини (px) — телефон: АКМ по центру, без бокового зсуву.
+// Нижче цієї ширини (px) — телефон: АКМ по центру, без бокового зсуву, і ×2 більший.
 const MOBILE_MAX_WIDTH = 600;
+const MOBILE_SIZE_MUL = 2;
+// На мобайлі у Features довертаємо всю розбирку у вертикальніший вигляд (екран вузький, а
+// висоти багато). Трохи менше за 90° — динамічніше. У CTA roll = 0 (горизонталь, без змін).
+const FEATURES_MOBILE_ROLL = (80 * Math.PI) / 180;
+
+// Еталонний кадр (як у ScenePage): розмір моделі підібрано під 1920×1080 і масштабується
+// коефіцієнтом min(1, w/1920, h/1080) — на 1920 як задизайнено, нижче плавно меншає за
+// меншим виміром. REF_SLOT — розміри слот-боксів на еталоні (px), під них рахується базовий
+// масштаб (незалежно від того, як CSS змінює бокс на менших екранах). DOM-бокс дає лише центр.
+const REF = { width: 1920, height: 1080 };
+const REF_SLOT: Record<AkmSlotKey, { w: number; h: number }> = {
+  features: { w: 332, h: 920 },
+  cta: { w: 940, h: 340 },
+};
 
 const SLOT: Record<AkmSlotKey, { scaleMult: number; offsetXFrac: number }> = {
   features: { scaleMult: 3.5, offsetXFrac: 0.12 },
@@ -118,30 +132,39 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
     }
   };
 
-  // Позиція+масштаб під бокс слота (площина z = 0). null, якщо DOM-бокс відсутній.
+  // Позиція (центр живого DOM-бокса) + масштаб від еталона × коефіцієнт вписування.
+  // null, якщо DOM-бокс відсутній.
   const placeInSlot = (
     slot: AkmSlotKey,
     worldPerPx: number,
+    worldPerPxRef: number,
+    viewportFit: number,
   ): Placement | null => {
     const element = document.getElementById(AKM_SLOT_ID[slot]);
     if (!element) return null;
 
     const rect = element.getBoundingClientRect();
     const { scaleMult, offsetXFrac } = SLOT[slot];
-    const shiftX = size.width > MOBILE_MAX_WIDTH ? offsetXFrac : 0;
+    const ref = REF_SLOT[slot];
+    const isMobile = size.width <= MOBILE_MAX_WIDTH;
+    const shiftX = isMobile ? 0 : offsetXFrac;
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
+
+    // Базовий масштаб — вписування моделі в еталонний бокс (у px на 1920×1080).
+    const baseScale =
+      Math.min(
+        (ref.w * worldPerPxRef) / geometry.footprint.w,
+        (ref.h * worldPerPxRef) / geometry.footprint.h,
+      ) * scaleMult;
+    const mobileMul = isMobile ? MOBILE_SIZE_MUL : 1;
 
     return {
       x:
         (centerX - size.width / 2) * worldPerPx +
         shiftX * size.width * worldPerPx,
       y: (size.height / 2 - centerY) * worldPerPx,
-      scale:
-        Math.min(
-          (rect.width * worldPerPx) / geometry.footprint.w,
-          (rect.height * worldPerPx) / geometry.footprint.h,
-        ) * scaleMult,
+      scale: baseScale * viewportFit * mobileMul,
     };
   };
 
@@ -156,12 +179,17 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
     }
 
     const camera3d = camera as PerspectiveCamera;
-    const worldPerPx =
-      (2 * Math.tan((camera3d.fov * Math.PI) / 180 / 2) * camera3d.position.z) /
-      size.height;
+    const viewSpan = 2 * Math.tan((camera3d.fov * Math.PI) / 180 / 2) * camera3d.position.z;
+    const worldPerPx = viewSpan / size.height;
+    const worldPerPxRef = viewSpan / REF.height;
+    const viewportFit = Math.min(
+      1,
+      size.width / REF.width,
+      size.height / REF.height,
+    );
 
-    const fromFeatures = placeInSlot("features", worldPerPx);
-    const toCta = placeInSlot("cta", worldPerPx);
+    const fromFeatures = placeInSlot("features", worldPerPx, worldPerPxRef, viewportFit);
+    const toCta = placeInSlot("cta", worldPerPx, worldPerPxRef, viewportFit);
     const flight = smoothstep(clamp01(choreo.akmFlow));
 
     let placement: Placement | null;
@@ -180,12 +208,16 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
     }
 
     // Поза «інспекції» у Features → рівна горизонталь у CTA (по мірі перельоту).
+    // На мобайлі у Features додаємо екранний roll (вертикальніше); зникає при перельоті в CTA.
+    const isMobile = size.width <= MOBILE_MAX_WIDTH;
+    const roll = isMobile ? lerp(FEATURES_MOBILE_ROLL, 0, flight) : 0;
     group.position.set(placement.x, placement.y, 0);
     group.scale.setScalar(placement.scale);
     group.rotation.set(
       lerp(choreo.akmPitch, 0, flight),
       lerp(choreo.akmYaw, 0, flight),
-      0,
+      roll,
+      isMobile ? "ZYX" : "XYZ",
     );
 
     // Показуємо лише коли модель реально у в'юпорті (щоб було видно переліт).

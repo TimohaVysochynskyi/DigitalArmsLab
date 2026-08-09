@@ -122,20 +122,25 @@
   .cardText {
     font-size: 16px;
   }
+  /* Слот масштабується висотою (height:100%), але обмежений і по ширині (max-width),
+     щоб на вузьких-високих екранах не роздувався й не давав горизонтального скролу. */
   .imageWrapper {
     padding: 0;
-    width: 220px;
-    height: auto;
   }
   .akmSlot {
-    height: auto;
-    width: 100%;
+    max-width: 24vw;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .sticky {
+    padding: 80px 40px;
   }
 }
 
 @media screen and (max-width: 600px) {
   .sticky {
-    padding: 40px 24px;
+    padding: 80px 24px;
   }
   .section {
     flex-direction: column-reverse;
@@ -151,6 +156,7 @@
   .akmSlot {
     height: 100%;
     width: auto;
+    max-width: none;
   }
   .card {
     width: 100%;

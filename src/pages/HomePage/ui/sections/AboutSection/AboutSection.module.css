@@ -161,6 +161,12 @@
   }
 }
 
+@media screen and (max-width: 768px) {
+  .sectionWrapper {
+    padding: 80px 40px;
+  }
+}
+
 @media screen and (max-width: 600px) {
   .sectionWrapper {
     padding: 80px 24px;

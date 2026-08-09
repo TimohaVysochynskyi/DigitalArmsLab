@@ -5,11 +5,21 @@
    тож камера кадрує будь-який glb однаково. Тогл розбирання програє кліп один раз і
    лишає модель у кінцевій позі. */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import { Box3, Group, LoopOnce, Sphere, Vector3 } from "three";
 import { tuneMaterials } from "@/shared/Scene3D";
-import { ASSEMBLY_CLIPS, MODEL_FACING, MODEL_RADIUS } from "./viewer.config";
+import {
+  ASSEMBLY_CLIPS,
+  DEFAULT_ORBIT,
+  MODEL_FACING,
+  MODEL_RADIUS,
+} from "./viewer.config";
+import {
+  orbitDirection,
+  projectVertices,
+  type ModelProjection,
+} from "./viewer.math";
 
 const NO_FACING: [number, number, number] = [0, 0, 0];
 const FADE = 0.2;
@@ -18,6 +28,8 @@ type WeaponModelProps = {
   url: string;
   isDisassembled: boolean;
   onAssemblyAvailable: (isAvailable: boolean) => void;
+  /** Обмір зібраної моделі у стартовому ракурсі — за ним камера кадрує сцену. */
+  onMeasure: (projection: ModelProjection) => void;
 };
 
 const findClip = (names: string[], variants: string[]) =>
@@ -27,6 +39,7 @@ const WeaponModel = ({
   url,
   isDisassembled,
   onAssemblyAvailable,
+  onMeasure,
 }: WeaponModelProps) => {
   const root = useRef<Group>(null);
   const { scene, animations } = useGLTF(url);
@@ -60,6 +73,19 @@ const WeaponModel = ({
   useEffect(() => {
     onAssemblyAvailable(Boolean(clips.disassemble));
   }, [clips, onAssemblyAvailable]);
+
+  // Міряємо у зібраній позі, до старту будь-якого кліпу.
+  useLayoutEffect(() => {
+    const group = root.current;
+    if (!group) return;
+
+    onMeasure(
+      projectVertices(
+        group,
+        orbitDirection(DEFAULT_ORBIT.phi, DEFAULT_ORBIT.theta),
+      ),
+    );
+  }, [scene, fit, onMeasure]);
 
   useEffect(() => {
     if (isFirstPose.current) {

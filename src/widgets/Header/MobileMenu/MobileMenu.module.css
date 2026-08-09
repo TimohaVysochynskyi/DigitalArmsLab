@@ -108,6 +108,8 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 60px 80px;
+  overflow-y: auto;
+  gap: 32px;
 }
 .bodyTop {
   display: flex;

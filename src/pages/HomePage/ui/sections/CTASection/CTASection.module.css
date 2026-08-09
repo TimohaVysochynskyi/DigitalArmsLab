@@ -14,10 +14,12 @@
   position: relative;
   z-index: 1;
 }
+/* Розмір слота — частка ШИРИНИ в'юпорту (49vw ≈ 940/1920), з максимумом 940px.
+   → на 1920 рівно 940×340 (як зараз), нижче — плавно зменшується пропорційно екрану
+   й ніколи не ширший за в'юпорт, тож моделі більше немає куди вилазити. */
 .akmSlot {
-  height: 340px;
+  width: min(940px, 49vw);
   aspect-ratio: 1872 / 677;
-  max-width: 100%;
 }
 
 /**** RESPONSIVE ****/
@@ -30,9 +32,11 @@
   .section {
     gap: 50px;
   }
-  .akmSlot {
-    height: 290px;
-    max-width: 100%;
+}
+
+@media screen and (max-width: 768px) {
+  .sectionWrapper {
+    padding: 40px;
   }
 }
 
@@ -40,8 +44,8 @@
   .sectionWrapper {
     padding: 40px 24px;
   }
+  /* На телефоні секція стає вертикальною — даємо моделі більше місця. */
   .akmSlot {
-    height: auto;
-    width: 100%;
+    width: min(940px, 78vw);
   }
 }

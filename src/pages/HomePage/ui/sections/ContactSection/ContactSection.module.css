@@ -277,6 +277,12 @@
   }
 }
 
+@media screen and (max-width: 768px) {
+  .sectionWrapper {
+    padding: 40px;
+  }
+}
+
 @media screen and (max-width: 600px) {
   .sectionWrapper {
     padding: 40px 24px;

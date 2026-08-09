@@ -1,7 +1,13 @@
 /* Орбіта мишею/пальцем + зум колесом. Скидання виду — не стрибком, а плавним перельотом
    у сферичних координатах (радіус/нахил/азимут), тож камера повертається по дузі. */
 
-import { useEffect, useMemo, useRef, type ComponentRef } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ComponentRef,
+} from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { Spherical, Vector3 } from "three";
@@ -9,19 +15,24 @@ import {
   AUTO_ROTATE_SPEED,
   CAMERA_FOV,
   DEFAULT_ORBIT,
-  FIT_PADDING,
-  MODEL_RADIUS,
-  MODEL_ZOOM,
+  FRAME_FILL,
   POLAR_LIMITS,
   RESET_DURATION,
   ZOOM_LIMITS,
 } from "./viewer.config";
-import { easeInOutCubic, fitDistance, shortestAngle } from "./viewer.math";
+import {
+  easeInOutCubic,
+  fitDistance,
+  shortestAngle,
+  type ModelProjection,
+} from "./viewer.math";
 
 type ViewControlsProps = {
   autoRotate: boolean;
   /** Змінюється щоразу, коли треба повернутись до дефолтного виду. */
   resetSignal: number;
+  /** Обмір моделі; поки null — кадрування ще не рахуємо. */
+  projection: ModelProjection | null;
 };
 
 type ResetState = {
@@ -30,7 +41,11 @@ type ResetState = {
   fromTarget: Vector3;
 };
 
-const ViewControls = ({ autoRotate, resetSignal }: ViewControlsProps) => {
+const ViewControls = ({
+  autoRotate,
+  resetSignal,
+  projection,
+}: ViewControlsProps) => {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const reset = useRef<ResetState | null>(null);
   const currentFit = useRef(0);
@@ -38,21 +53,27 @@ const ViewControls = ({ autoRotate, resetSignal }: ViewControlsProps) => {
 
   const scratch = useMemo(() => new Spherical(), []);
 
+  /* Дистанція, з якої модель вписується в поточний канвас: рахується з її реальних
+     габаритів у стартовому ракурсі + аспекту канваса, тож вужчий екран сам віддаляє
+     камеру, а не ріже модель. */
   const fit = useMemo(
     () =>
-      fitDistance(
-        MODEL_RADIUS,
-        CAMERA_FOV,
-        size.width / size.height,
-        FIT_PADDING,
-      ) / MODEL_ZOOM,
-    [size.width, size.height],
+      projection
+        ? fitDistance(
+            projection,
+            CAMERA_FOV,
+            size.width / size.height,
+            FRAME_FILL,
+          )
+        : 0,
+    [projection, size.width, size.height],
   );
 
   // Первинне кадрування; при зміні розміру в'юпорта — зберігаємо відносний зум.
-  useEffect(() => {
+  // Саме layout-ефект: камера має стати на місце до першого кадру з моделлю.
+  useLayoutEffect(() => {
     const control = controls.current;
-    if (!control) return;
+    if (!control || !fit) return;
 
     const previousFit = currentFit.current;
     currentFit.current = fit;

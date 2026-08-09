@@ -115,6 +115,12 @@
   }
 }
 
+@media screen and (max-width: 768px) {
+  .footerWrapper {
+    padding: 80px 40px;
+  }
+}
+
 @media screen and (max-width: 600px) {
   .footerWrapper {
     padding: 80px 24px;

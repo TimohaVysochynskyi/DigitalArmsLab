@@ -20,74 +20,58 @@ export const damp = (
   delta: number,
 ) => value + (target - value) * (1 - Math.exp(-rate * delta));
 
-/* Габаритна коробка бреше про розмір силуету: у дрона з розкинутими променями її кутки —
-   порожнеча, і після повороту вони дають слід помітно більший за те, що реально видно
-   (модель виходить меншою за свій бокс). Тому міряємо РЕАЛЬНІ вершини — той самий підхід,
-   що й у ScenePage (projectVertices). Вершини збираємо один раз, далі крутимо їх дешево. */
+/* Меші, які реально малюються, з матрицями у ВЛАСНІЙ системі координат root'а.
 
-/* Вершини моделі у ВЛАСНІЙ системі координат root'а — навмисно не у світовій.
-   Світова протекла б поточними обертом/масштабом групи, у яку модель уже вставлено,
-   і зняти геометрію повторно (наприклад, у розібраному стані вже після монтування)
-   стало б неможливо: результат залежав би від того, як модель зараз повернута. */
-export const collectVertices = (root: Object3D, knownPivot?: Vector3) => {
+   Локальна система, а не світова, — принципово: світова протекла б поточними обертом і
+   масштабом групи, у яку модель уже вставлено, і зняти геометрію повторно (наприклад, у
+   розібраному стані вже після монтування) стало б неможливо.
+
+   Індексний буфер обов'язковий: в оптимізованих glb (gltfpack/meshopt) вершинний буфер
+   спільний для кількох примітивів, тож в атрибуті лежать і «сироти» — вершини, яких цей
+   меш не малює. Прохід по всьому атрибуту давав силует у півтора раза більший за те, що
+   видно на екрані, і вписування в бокс через це зменшувало модель. */
+type DrawnMesh = { mesh: Mesh; used: Uint8Array | null; matrix: Matrix4 };
+
+const drawnMeshes = (root: Object3D): DrawnMesh[] => {
   root.updateWorldMatrix(true, true);
   const toLocal = new Matrix4().copy(root.matrixWorld).invert();
+  const meshes: DrawnMesh[] = [];
 
-  /* Беремо лише вершини, на які реально посилається індексний буфер. В оптимізованих glb
-     (gltfpack/meshopt) вершинний буфер спільний для кількох примітивів, тож в атрибуті
-     лежать і «сироти» — вершини, які цей меш не малює. Прохід по всьому атрибуту давав
-     силует у півтора раза більший за те, що видно на екрані, і вписування в бокс через це
-     зменшувало модель. */
-  const meshes: { mesh: Mesh; used: Uint8Array | null }[] = [];
-  let total = 0;
   root.traverse((object) => {
     const mesh = object as Mesh;
     const position = mesh.geometry?.attributes.position;
     if (!mesh.isMesh || !position) return;
 
     const indices = mesh.geometry.index;
-    if (!indices) {
-      meshes.push({ mesh, used: null });
-      total += position.count;
-      return;
+    let used: Uint8Array | null = null;
+    if (indices) {
+      used = new Uint8Array(position.count);
+      for (let i = 0; i < indices.count; i++) used[indices.getX(i)] = 1;
     }
 
-    const used = new Uint8Array(position.count);
-    let count = 0;
-    for (let i = 0; i < indices.count; i++) {
-      const vertex = indices.getX(i);
-      if (!used[vertex]) {
-        used[vertex] = 1;
-        count++;
-      }
-    }
-    meshes.push({ mesh, used });
-    total += count;
+    meshes.push({
+      mesh,
+      used,
+      matrix: new Matrix4().multiplyMatrices(toLocal, mesh.matrixWorld),
+    });
   });
 
-  const vertices = new Float32Array(total * 3);
+  return meshes;
+};
+
+/** Центр габаритів моделі та її радіус — обидва за один прохід, без тимчасових масивів. */
+export const modelBounds = (root: Object3D) => {
   const vertex = new Vector3();
-  let index = 0;
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  let minZ = Infinity;
-  let maxZ = -Infinity;
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
 
-  for (const { mesh, used } of meshes) {
+  for (const { mesh, used, matrix } of drawnMeshes(root)) {
     const position = mesh.geometry.attributes.position;
-
     for (let i = 0; i < position.count; i++) {
       if (used && !used[i]) continue;
 
-      vertex
-        .fromBufferAttribute(position, i)
-        .applyMatrix4(mesh.matrixWorld)
-        .applyMatrix4(toLocal);
-      vertices[index++] = vertex.x;
-      vertices[index++] = vertex.y;
-      vertices[index++] = vertex.z;
+      vertex.fromBufferAttribute(position, i).applyMatrix4(matrix);
       if (vertex.x < minX) minX = vertex.x;
       if (vertex.x > maxX) maxX = vertex.x;
       if (vertex.y < minY) minY = vertex.y;
@@ -97,48 +81,19 @@ export const collectVertices = (root: Object3D, knownPivot?: Vector3) => {
     }
   }
 
-  // Центр габаритів. Для АКМ у розібраному стані центр інший, ніж у зібраному, тож
-  // його можна передати ззовні — щоб обидва знімки лишились в одній системі відліку.
-  const pivot =
-    knownPivot ??
-    new Vector3((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
+  const pivot = new Vector3(
+    (minX + maxX) / 2,
+    (minY + maxY) / 2,
+    (minZ + maxZ) / 2,
+  );
+  // Радіус описаної сфери: не залежить від повороту, тож ним безпечно задавати межі
+  // бінів по глибині для БУДЬ-ЯКОЇ пози.
+  const radius =
+    Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2 || 1;
 
-  for (let i = 0; i < vertices.length; i += 3) {
-    vertices[i] -= pivot.x;
-    vertices[i + 1] -= pivot.y;
-    vertices[i + 2] -= pivot.z;
-  }
-
-  return { vertices, pivot };
+  return { pivot, radius };
 };
 
-/** Вершини, повернуті в задану позу. Рахується раз на позу — далі фіт лише множить. */
-export const rotateVertices = (vertices: Float32Array, pose: Euler) => {
-  const rotated = new Float32Array(vertices.length);
-  const vertex = new Vector3();
-
-  for (let i = 0; i < vertices.length; i += 3) {
-    vertex.set(vertices[i], vertices[i + 1], vertices[i + 2]).applyEuler(pose);
-    rotated[i] = vertex.x;
-    rotated[i + 1] = vertex.y;
-    rotated[i + 2] = vertex.z;
-  }
-
-  return rotated;
-};
-
-/* Профіль силуету по «скибках» глибини.
-
-   Вписати модель у бокс точно можна лише з поправкою на перспективу (ближчі до камери
-   частини проєктуються більшими), а це залежить від масштабу — тобто потрібна ітерація.
-   Ганяти сотні тисяч вершин на кожній ітерації щокадру не можна, а кешувати результат по
-   позиції не вийде: слот у `position: sticky` рухається в документі щопікселя скролу.
-
-   Тому один раз зводимо модель до профілю: ділимо її на біни по глибині й лишаємо в кожному
-   крайні x/y. Екстремуми силуету за будь-якого масштабу лежать серед цих крайніх точок, а їх
-   ~сотня — вписування стає настільки дешевим, що рахується щокадру без кешу.
-   За z у біні беремо НАЙБЛИЖЧИЙ до камери: він найсильніше збільшує, тож похибка
-   квантування завжди в бік «трохи менша модель», і за бокс вона не вилізе. */
 export type Silhouette = {
   z: Float32Array;
   minX: Float32Array;
@@ -150,67 +105,93 @@ export type Silhouette = {
   flatHeight: number;
 };
 
-export const poseSilhouette = (
-  rotated: Float32Array,
+/* Профілі силуету одразу для КІЛЬКОХ поз — одним проходом по геометрії.
+
+   Раніше це був ланцюжок окремих проходів (зібрати вершини → повернути → збінити, і так на
+   кожну позу): вісім читань по 86–116 тис. вершин і кілька мегабайтів тимчасових масивів
+   на кожну модель. На середньому телефоні це давало секундний фриз рівно в момент появи
+   моделі. Тут геометрія читається один раз, на кожну вершину припадає по одному множенню
+   на позу, а з пам'яті витрачаються лише самі біни. */
+export const modelSilhouettes = (
+  root: Object3D,
+  pivot: Vector3,
+  radius: number,
+  poses: Euler[],
   binCount = 96,
-): Silhouette => {
-  let minZ = Infinity;
-  let maxZ = -Infinity;
-  for (let i = 2; i < rotated.length; i += 3) {
-    if (rotated[i] < minZ) minZ = rotated[i];
-    if (rotated[i] > maxZ) maxZ = rotated[i];
-  }
-  const span = maxZ - minZ || 1;
+): Silhouette[] => {
+  const recenter = new Matrix4().makeTranslation(-pivot.x, -pivot.y, -pivot.z);
+  const span = radius * 2;
 
-  const z = new Float32Array(binCount).fill(-Infinity);
-  const minX = new Float32Array(binCount).fill(Infinity);
-  const maxX = new Float32Array(binCount).fill(-Infinity);
-  const minY = new Float32Array(binCount).fill(Infinity);
-  const maxY = new Float32Array(binCount).fill(-Infinity);
+  const bins = poses.map(() => ({
+    z: new Float32Array(binCount).fill(-Infinity),
+    minX: new Float32Array(binCount).fill(Infinity),
+    maxX: new Float32Array(binCount).fill(-Infinity),
+    minY: new Float32Array(binCount).fill(Infinity),
+    maxY: new Float32Array(binCount).fill(-Infinity),
+  }));
 
-  for (let i = 0; i < rotated.length; i += 3) {
-    const x = rotated[i];
-    const y = rotated[i + 1];
-    const bin = Math.min(
-      binCount - 1,
-      Math.floor(((rotated[i + 2] - minZ) / span) * binCount),
+  const source = new Vector3();
+  const vertex = new Vector3();
+
+  for (const { mesh, used, matrix } of drawnMeshes(root)) {
+    const position = mesh.geometry.attributes.position;
+    // Оберт, рецентрування і трансформ меша згорнуті в одну матрицю на позу.
+    const combined = poses.map((pose) =>
+      new Matrix4().makeRotationFromEuler(pose).multiply(recenter).multiply(matrix),
     );
-    if (rotated[i + 2] > z[bin]) z[bin] = rotated[i + 2];
-    if (x < minX[bin]) minX[bin] = x;
-    if (x > maxX[bin]) maxX[bin] = x;
-    if (y < minY[bin]) minY[bin] = y;
-    if (y > maxY[bin]) maxY[bin] = y;
+
+    for (let i = 0; i < position.count; i++) {
+      if (used && !used[i]) continue;
+
+      source.fromBufferAttribute(position, i);
+      for (let p = 0; p < combined.length; p++) {
+        vertex.copy(source).applyMatrix4(combined[p]);
+
+        const bin = Math.min(
+          binCount - 1,
+          Math.max(0, Math.floor(((vertex.z + radius) / span) * binCount)),
+        );
+        const slot = bins[p];
+        // За z у біні беремо НАЙБЛИЖЧИЙ до камери: він найсильніше збільшує, тож похибка
+        // квантування завжди в бік «трохи менша модель», і за бокс вона не вилізе.
+        if (vertex.z > slot.z[bin]) slot.z[bin] = vertex.z;
+        if (vertex.x < slot.minX[bin]) slot.minX[bin] = vertex.x;
+        if (vertex.x > slot.maxX[bin]) slot.maxX[bin] = vertex.x;
+        if (vertex.y < slot.minY[bin]) slot.minY[bin] = vertex.y;
+        if (vertex.y > slot.maxY[bin]) slot.maxY[bin] = vertex.y;
+      }
+    }
   }
 
-  // Порожні біни викидаємо, щоб не перевіряти їх на кожній ітерації.
-  const used: number[] = [];
-  for (let bin = 0; bin < binCount; bin++) {
-    if (maxX[bin] !== -Infinity) used.push(bin);
-  }
+  return bins.map((slot) => {
+    // Порожні біни викидаємо, щоб не перевіряти їх на кожній ітерації вписування.
+    const filled: number[] = [];
+    for (let bin = 0; bin < binCount; bin++) {
+      if (slot.maxX[bin] !== -Infinity) filled.push(bin);
+    }
 
-  const pick = (source: Float32Array) =>
-    Float32Array.from(used, (bin) => source[bin]);
+    const pick = (source: Float32Array) =>
+      Float32Array.from(filled, (bin) => source[bin]);
 
-  let flatMinX = Infinity;
-  let flatMaxX = -Infinity;
-  let flatMinY = Infinity;
-  let flatMaxY = -Infinity;
-  for (const bin of used) {
-    if (minX[bin] < flatMinX) flatMinX = minX[bin];
-    if (maxX[bin] > flatMaxX) flatMaxX = maxX[bin];
-    if (minY[bin] < flatMinY) flatMinY = minY[bin];
-    if (maxY[bin] > flatMaxY) flatMaxY = maxY[bin];
-  }
+    let flatMinX = Infinity, flatMaxX = -Infinity;
+    let flatMinY = Infinity, flatMaxY = -Infinity;
+    for (const bin of filled) {
+      if (slot.minX[bin] < flatMinX) flatMinX = slot.minX[bin];
+      if (slot.maxX[bin] > flatMaxX) flatMaxX = slot.maxX[bin];
+      if (slot.minY[bin] < flatMinY) flatMinY = slot.minY[bin];
+      if (slot.maxY[bin] > flatMaxY) flatMaxY = slot.maxY[bin];
+    }
 
-  return {
-    z: pick(z),
-    minX: pick(minX),
-    maxX: pick(maxX),
-    minY: pick(minY),
-    maxY: pick(maxY),
-    flatWidth: flatMaxX - flatMinX || 1,
-    flatHeight: flatMaxY - flatMinY || 1,
-  };
+    return {
+      z: pick(slot.z),
+      minX: pick(slot.minX),
+      maxX: pick(slot.maxX),
+      minY: pick(slot.minY),
+      maxY: pick(slot.maxY),
+      flatWidth: flatMaxX - flatMinX || 1,
+      flatHeight: flatMaxY - flatMinY || 1,
+    };
+  });
 };
 
 export type BoxFit = {

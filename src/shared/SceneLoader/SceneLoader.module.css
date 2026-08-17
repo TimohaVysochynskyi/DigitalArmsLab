@@ -1,0 +1,14 @@
+/* Тимчасове оформлення — за дизайнером. */
+.loader {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: 1000;
+
+  font-family: "NotoSansMono-Medium";
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--secondary-color);
+  pointer-events: none;
+}

@@ -18,37 +18,43 @@
    найширший ракурс) і далі тримається сталим: інакше модель «дихала» б розміром під час
    доворотів. Для CTA фіт рахується по РОЗІБРАНОМУ силуету, щоб деталі не вилізли за бокс. */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useAnimations } from "@react-three/drei";
-import { Vector3, Euler, Group, PerspectiveCamera, LoopOnce } from "three";
-import { tuneMaterials } from "@/shared/Scene3D";
+import { useAnimations } from "@react-three/drei";
+import { useGltfModel } from "@/shared/Scene3D";
+import {
+  Vector3,
+  Euler,
+  Quaternion,
+  Group,
+  PerspectiveCamera,
+  LoopOnce,
+} from "three";
+import { useTunedMaterials } from "@/shared/Scene3D";
 import type { AkmSlotKey, Choreo } from "./types";
 import { AKM_SLOT_ID } from "./types";
 import type { Silhouette } from "./math";
 import {
   clamp01,
-  collectVertices,
   fitToBox,
   lerp,
-  poseSilhouette,
-  rotateVertices,
+  modelBounds,
+  modelSilhouettes,
   smoothstep,
 } from "./math";
 
-const MODEL_URL = "/models/akm.opt.glb";
-useGLTF.preload(MODEL_URL);
+const MODEL_URL = "/models/akm.ktx2.glb";
 
 const DEG = Math.PI / 180;
 
 // Профіль до глядача (дефолт моделі — ствол уперед / приклад до нас).
 const FACING: [number, number, number] = [0, -Math.PI / 2, 0];
 
-// Матеріали: делікатне відбиття оточення + вища мінімальна шорсткість, щоб дерево було
-// матовим і природним (без глянцевих «бардових» відблисків), а метал — не «дешевим».
-const ENV_MAP_INTENSITY = 0.5;
-const MIN_ROUGHNESS = 0.65;
+/* Матеріали: делікатне відбиття оточення + послаблений рельєф і піднята шорсткість.
+   Останні два прибирають мерехтіння блиску на дрібному рельєфі; дерево від цього ще й
+   виглядає матовішим і природнішим, без глянцевих «бардових» відблисків. */
+const MATERIALS = { envMapIntensity: 0.5, normalScale: 0.8, roughnessBoost: 1.15 };
 
 // Точні назви кліпів усередині akm.glb (саме `diassemble`, з помилкою — так у моделі).
 const CLIP = { idle: "idle", disassemble: "diassemble" } as const;
@@ -107,15 +113,16 @@ const slotRect = (slot: AkmSlotKey) =>
 const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
   const root = useRef<Group>(null);
   const model = useRef<Group>(null);
-  const { scene, animations } = useGLTF(MODEL_URL);
+  const { scene, animations } = useGltfModel(MODEL_URL);
   const { actions, mixer } = useAnimations(animations, model);
   const { camera, size } = useThree();
 
   const projected = useMemo(() => new Vector3(), []);
 
-  // Центр моделі для рецентрування. Це лише сталий зсув примітива; на точність
-  // вписування він не впливає, бо fitToBox сам центрує видимий силует.
-  const pivot = useMemo(() => collectVertices(scene).pivot, [scene]);
+  /* Центр і радіус моделі. Знімаються з bind-пози: pivot — це лише сталий зсув примітива
+     (на точність вписування не впливає, бо fitToBox сам центрує видимий силует), а радіус
+     задає межі бінів по глибині й від пози не залежить. */
+  const bounds = useMemo(() => modelBounds(scene), [scene]);
 
   /* Програє рівно ОДИН зашитий кліп у заданій точці. Решту зупиняємо, щоб службові
      пер-об'єктні дії з експорту не домішувались і не рухали деталі поза сценарієм. */
@@ -139,28 +146,22 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
     [actions, mixer],
   );
 
-  /** Профіль силуету моделі в поточному стані вузлів, повернутий у задану позу. */
+  /** Профіль силуету в поточному стані вузлів. Поза = FACING моделі + заданий ракурс. */
   const snapshot = useMemo(
-    () => (pose: Pose) =>
-      poseSilhouette(
-        rotateVertices(
-          rotateVertices(
-            collectVertices(scene, pivot).vertices,
-            new Euler(...FACING),
-          ),
-          toEuler(pose),
-        ),
-      ),
-    [scene, pivot],
+    () => (pose: Pose) => {
+      const facing = new Euler(...FACING);
+      const full = new Euler().setFromQuaternion(
+        new Quaternion()
+          .setFromEuler(toEuler(pose))
+          .multiply(new Quaternion().setFromEuler(facing)),
+      );
+
+      return modelSilhouettes(scene, bounds.pivot, bounds.radius, [full])[0];
+    },
+    [scene, bounds],
   );
 
-  // Пом'якшуємо метал на матеріалах моделі.
-  useEffect(() => {
-    tuneMaterials(scene, {
-      envMapIntensity: ENV_MAP_INTENSITY,
-      minRoughness: MIN_ROUGHNESS,
-    });
-  }, [scene]);
+  useTunedMaterials(scene, MATERIALS);
 
   /* Профілі силуету для обох слотів.
 
@@ -295,7 +296,7 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
       <group ref={model} rotation={FACING}>
         <primitive
           object={scene}
-          position={[-pivot.x, -pivot.y, -pivot.z]}
+          position={[-bounds.pivot.x, -bounds.pivot.y, -bounds.pivot.z]}
         />
       </group>
     </group>

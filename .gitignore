@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Нативний gltfpack для scripts/prepare-models.mjs (бінарник під платформу)
+tools/

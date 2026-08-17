@@ -29,63 +29,80 @@ body {
 @font-face {
   font-family: "Montserrat-Medium";
   src: url(./assets/fonts/Montserrat-Medium.woff2);
+  font-display: swap;
 }
 
 @font-face {
   font-family: "FixelText-ExtraBold";
   src: url(./assets/fonts/FixelText/FixelText-ExtraBold.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelText-Medium";
   src: url(./assets/fonts/FixelText/FixelText-Medium.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelText-Regular";
   src: url(./assets/fonts/FixelText/FixelText-Regular.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelText-ExtraLight";
   src: url(./assets/fonts/FixelText/FixelText-ExtraLight.woff2);
+  font-display: swap;
 }
 
 @font-face {
   font-family: "FixelDisplay-Light";
   src: url(./assets/fonts/FixelDisplay/FixelDisplay-Light.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelDisplay-ExtraLight";
   src: url(./assets/fonts/FixelDisplay/FixelDisplay-ExtraLight.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelDisplay-Regular";
   src: url(./assets/fonts/FixelDisplay/FixelDisplay-Regular.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelDisplay-Medium";
   src: url(./assets/fonts/FixelDisplay/FixelDisplay-Medium.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelDisplay-SemiBold";
   src: url(./assets/fonts/FixelDisplay/FixelDisplay-SemiBold.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "FixelDisplay-Bold";
   src: url(./assets/fonts/FixelDisplay/FixelDisplay-Bold.woff2);
+  font-display: swap;
 }
 
 @font-face {
   font-family: "NotoSansMono-Black";
-  src: url(./assets/fonts/NotoSansMono/NotoSansMono-Black.woff2);
+  /* Не з assets/: цим шрифтом набрано LCP-елемент (заголовок Hero), і його треба
+     preload'нути в index.html — а Vite хешує імена у assets, послатися на них не вийде. */
+  src: url(/fonts/NotoSansMono-Black.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "NotoSansMono-ExtraBold";
   src: url(./assets/fonts/NotoSansMono/NotoSansMono-ExtraBold.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "NotoSansMono-SemiBold";
   src: url(./assets/fonts/NotoSansMono/NotoSansMono-SemiBold.woff2);
+  font-display: swap;
 }
 @font-face {
   font-family: "NotoSansMono-Medium";
   src: url(./assets/fonts/NotoSansMono/NotoSansMono-Medium.woff2);
+  font-display: swap;
 }

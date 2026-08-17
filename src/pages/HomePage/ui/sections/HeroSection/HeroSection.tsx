@@ -1,4 +1,5 @@
 import CTAButton from "@/shared/CTAButton";
+import DeferredVideo from "@/shared/DeferredVideo";
 import css from "./HeroSection.module.css";
 
 import bgVideo from "@/assets/videos/hero-bg.mp4";
@@ -7,16 +8,7 @@ const HeroSection = () => {
   return (
     <>
       <section id="hero" className={css.heroWrapper}>
-        <video
-          src={bgVideo}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className={css.bgVideo}
-        >
-          <source src={bgVideo} type="mp4" />
-        </video>
+        <DeferredVideo src={bgVideo} className={css.bgVideo} />
         {/* Порожній якір для 3D-дрона: задає його позицію та габарит у Hero.
             absolute → на потік не впливає; сам дрон малюється в overlay-канвасі. */}
         <div id="drone-slot-hero" className={css.droneSlot} aria-hidden="true" />

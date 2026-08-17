@@ -17,23 +17,19 @@
 import { useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useGltfModel, useTunedMaterials } from "@/shared/Scene3D";
 import { Box3, Vector3, Euler, Group, PerspectiveCamera } from "three";
 import type { Choreo } from "./types";
 import { DRONE_SLOT_ID } from "./types";
-import {
-  clamp01,
-  collectVertices,
-  damp,
-  fitToBox,
-  lerp,
-  poseSilhouette,
-  rotateVertices,
-} from "./math";
+import { clamp01, damp, fitToBox, lerp, modelBounds, modelSilhouettes } from "./math";
 import { usePointerAim } from "./usePointerAim";
 
-const MODEL_URL = "/models/drone.opt.glb";
-useGLTF.preload(MODEL_URL);
+const MODEL_URL = "/models/drone.ktx2.glb";
+
+/* Матеріали дрона раніше не налаштовувались узагалі — звідси найсильніше мерехтіння
+   блиску на дрібному рельєфі. Значення трохи стриманіші, ніж в АКМ: у дрона багато
+   дрібних пазів і глянцевий пластик. */
+const MATERIALS = { envMapIntensity: 0.45, normalScale: 0.7, roughnessBoost: 1.2 };
 
 const DEG = Math.PI / 180;
 
@@ -101,33 +97,28 @@ const rectCenter = (id: string) => {
 const DroneModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
   const root = useRef<Group>(null);
   const model = useRef<Group>(null);
-  const { scene } = useGLTF(MODEL_URL);
+  const { scene } = useGltfModel(MODEL_URL);
   const { camera, size } = useThree();
+  useTunedMaterials(scene, MATERIALS);
   const aim = usePointerAim();
   // Згладжений курсор — окремо від «сирого», щоб дрон наздоганяв його з інерцією.
   const aimed = useRef({ x: 0, y: 0 });
 
-  // Центр моделі + екранний слід у кожній з Hero-поз (для вписування в бокс слота).
+  /* Центр моделі + профілі силуету обох Hero-поз. Рахується ОДНИМ проходом по геометрії
+     (див. modelSilhouettes): окремі проходи на кожну позу коштували секундного фризу
+     в момент появи моделі. За готовим профілем вписування в бокс уже настільки дешеве,
+     що виконується щокадру. */
   const geometry = useMemo(() => {
     const height = new Box3().setFromObject(scene).getSize(new Vector3()).y || 1;
     const toEuler = ({ yaw, pitch, roll }: Pose) =>
       new Euler(pitch, yaw, roll, "ZXY");
-    const { vertices, pivot } = collectVertices(scene);
+    const { pivot, radius } = modelBounds(scene);
+    const [desktop, mobile] = modelSilhouettes(scene, pivot, radius, [
+      toEuler(TUNE.heroPose.desktop),
+      toEuler(TUNE.heroPose.mobile),
+    ]);
 
-    return {
-      pivot,
-      height,
-      // Профіль силуету в кожній з Hero-поз — за ним вписування в бокс коштує копійки
-      // і рахується щокадру (див. poseSilhouette).
-      heroSilhouette: {
-        desktop: poseSilhouette(
-          rotateVertices(vertices, toEuler(TUNE.heroPose.desktop)),
-        ),
-        mobile: poseSilhouette(
-          rotateVertices(vertices, toEuler(TUNE.heroPose.mobile)),
-        ),
-      },
-    };
+    return { pivot, height, heroSilhouette: { desktop, mobile } };
   }, [scene]);
 
   useFrame((state, delta) => {

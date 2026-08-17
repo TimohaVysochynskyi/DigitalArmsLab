@@ -21,8 +21,8 @@
    Повнокадрові ефекти (віньєтка, зерно) сюди теж не ставимо — вони мають лягати на всю
    сторінку, а не лише на 3D-шар; для них є shared/ScreenGrade. */
 
-import { Suspense, type ReactNode } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Suspense, useEffect, type ReactNode } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import { Preload } from "@react-three/drei";
 import { ACESFilmicToneMapping } from "three";
 import StudioEnvironment, { type LightingPreset } from "./StudioEnvironment";
@@ -36,13 +36,48 @@ type Scene3DProps = {
   children?: ReactNode;
   /** Характер освітлення сцени (див. StudioEnvironment). */
   lighting?: LightingPreset;
+  /* Чи малювати кадри. Хто саме це вирішує — не справа контейнера; він лише вимикає
+     цикл рендера. ВАЖЛИВО: зупинений цикл лишає на канвасі останній кадр, тож вимикати
+     можна тільки тоді, коли в ньому вже нічого немає (див. useSceneActivity). */
+  active?: boolean;
 };
 
-const Scene3D = ({ children, lighting = "showcase" }: Scene3DProps) => {
+/* Керує тим, чи малюються кадри.
+
+   Канвас працює в режимі `demand`: сам він не малює нічого, кадр з'являється лише на
+   явний запит. Поки сцена активна, ми ведемо власний цикл запитів; щойно неактивна —
+   просто перестаємо просити, і рендер зупиняється повністю.
+
+   Чому не проп `frameloop`: у <Canvas> він читається лише при монтуванні, і його зміна
+   в рантаймі до рендерера не доходить (перевірено: статичний `never` дає нуль малювань,
+   а перемикання пропа не змінює нічого). */
+const FrameloopGate = ({ active }: { active: boolean }) => {
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    if (!active) return;
+
+    let frame = requestAnimationFrame(function tick() {
+      invalidate();
+      frame = requestAnimationFrame(tick);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [active, invalidate]);
+
+  return null;
+};
+
+const Scene3D = ({
+  children,
+  lighting = "showcase",
+  active = true,
+}: Scene3DProps) => {
   return (
     <div className={css.layer} aria-hidden="true">
       <Canvas
         className={css.canvas}
+        frameloop="demand"
         dpr={[1, MAX_PIXEL_RATIO]}
         gl={{
           alpha: true,
@@ -56,6 +91,8 @@ const Scene3D = ({ children, lighting = "showcase" }: Scene3DProps) => {
           gl.toneMappingExposure = 0.95;
         }}
       >
+        <FrameloopGate active={active} />
+
         <Suspense fallback={null}>
           <StudioEnvironment preset={lighting} />
           {children}

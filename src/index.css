@@ -20,9 +20,17 @@
   box-sizing: border-box;
 }
 
+/* Фон задаємо і на html теж. Під час переходу (ховається адресна панель) браузер може
+   показати смугу поза межами body — вона має бути того самого чорного, інакше читається
+   як окрема «полоска». */
+html {
+  background-color: var(--black-color);
+}
+
 body {
   background-color: var(--black-color);
   min-height: 100vh;
+  min-height: 100lvh;
   width: 100%;
 }
 

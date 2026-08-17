@@ -39,18 +39,21 @@
   aspect-ratio: 1872 / 677;
 }
 
+/* Зовнішня рамка картки: лише місце й ширина. Висоту їй анімує AutoHeight, тож рамка
+   й падінги живуть на .cardBody — інакше вони б з'їдали виміряну висоту вмісту. */
 .card {
   flex-shrink: 0;
   width: 940px;
-  height: auto;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.cardBody {
   border: 1px solid var(--white-color);
   padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 28px;
-  position: absolute;
-  left: 0;
-  top: 0;
 }
 .cardHeader {
   display: flex;
@@ -71,9 +74,11 @@
   display: inline-block;
 }
 /* Друга цифра «залітає» знизу при зміні кроку (нуль лишається на місці). */
+/* Спільна крива для всієї зміни картки — і для цифри, і для тексту, і для висоти рамки
+   (див. AutoHeight). М'який вихід без відскоку: рух гальмує, а не «клацає». */
 .cardDigit {
   display: inline-block;
-  animation: digitIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: digitIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes digitIn {
   from {
@@ -91,18 +96,20 @@
   font-family: "FixelDisplay-Medium";
   font-weight: 500;
   color: var(--white-color);
-  animation: cardFade 0.45s ease both;
+  animation: cardFade 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Текст іде з невеликим запізненням після заголовка: читається як послідовне розкриття,
+   а не як одночасний стрибок усього блоку. */
 .cardText {
   font-family: "FixelDisplay-Regular";
   font-size: 20px;
   line-height: 120%;
   color: var(--secondary-light-color);
-  animation: cardFade 0.5s ease both;
+  animation: cardFade 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
 }
 @keyframes cardFade {
   from {
-    transform: translateY(12px);
+    transform: translateY(14px);
     opacity: 0;
   }
   to {
@@ -111,14 +118,24 @@
   }
 }
 
+/* Хто вимкнув рух — бачить зміну вмісту без переїздів. */
+@media (prefers-reduced-motion: reduce) {
+  .cardDigit,
+  .cardTitle,
+  .cardText {
+    animation: none;
+  }
+}
+
 /**** RESPONSIVE ****/
 
 @media screen and (max-width: 1024px) {
   .card {
-    padding: 16px;
     width: 350px;
+  }
+  .cardBody {
+    padding: 16px;
     gap: 20px;
-    height: auto;
   }
   .cardHeader {
     gap: 12px;

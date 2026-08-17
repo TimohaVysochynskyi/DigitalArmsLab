@@ -5,7 +5,7 @@ const AboutSection = () => {
   return (
     <>
       <section id="about" className={css.sectionWrapper}>
-        <VisionScanner />
+        <VisionScanner className={css.visionScanner} />
         <div className={css.section}>
           <div className={css.content}>
             <h2 className={css.title}>

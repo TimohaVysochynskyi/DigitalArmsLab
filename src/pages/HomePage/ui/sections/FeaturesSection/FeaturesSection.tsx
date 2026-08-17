@@ -1,3 +1,5 @@
+import AutoHeight from "@/shared/AutoHeight";
+
 import css from "./FeaturesSection.module.css";
 
 // Контент 3 карток (крок 0/1/2). Синхронізується зі скролом-піном і анімацією АКМ.
@@ -40,7 +42,9 @@ const FeaturesSection = ({ step }: FeaturesSectionProps) => {
                 aria-hidden="true"
               />
             </div>
-            <div className={css.card}>
+            {/* AutoHeight тягне рамку картки під новий вміст плавно — інакше висота
+                стрибала б на кожній зміні кроку й смикала верстку. */}
+            <AutoHeight className={css.card} contentClassName={css.cardBody}>
               <div className={css.cardHeader}>
                 <span className={css.cardNumber}>
                   <span className={css.cardZero}>0</span>
@@ -55,7 +59,7 @@ const FeaturesSection = ({ step }: FeaturesSectionProps) => {
               <p key={`text-${safeStep}`} className={css.cardText}>
                 {card.text}
               </p>
-            </div>
+            </AutoHeight>
           </div>
         </div>
       </section>

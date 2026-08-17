@@ -7,7 +7,7 @@ const CTASection = () => {
   return (
     <>
       <section id="cta" className={css.sectionWrapper}>
-        <VisionScanner />
+        <VisionScanner className={css.visionScanner} />
         <div className={css.section}>
           {/* Слот під 3D-АКМ (замість картинки akms-2). Габарити = аспект akms-2.png. */}
           <div id="akm-slot-cta" className={css.akmSlot} aria-hidden="true" />

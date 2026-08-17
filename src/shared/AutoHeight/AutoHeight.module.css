@@ -1,0 +1,15 @@
+/* Крива та сама, що в анімації вмісту (див. FeaturesSection): рух висоти й поява тексту
+   мають читатися як одна дія, а не як дві різні. overflow ховає вміст, який під час
+   переходу ще не вміщається. */
+.frame {
+  overflow: hidden;
+  transition-property: height;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Хто вимкнув рух — отримує миттєву зміну висоти замість «поповзня». */
+@media (prefers-reduced-motion: reduce) {
+  .frame {
+    transition: none;
+  }
+}

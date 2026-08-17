@@ -165,6 +165,9 @@
   .sectionWrapper {
     padding: 80px 40px;
   }
+  .visionScanner {
+    display: none;
+  }
 }
 
 @media screen and (max-width: 600px) {

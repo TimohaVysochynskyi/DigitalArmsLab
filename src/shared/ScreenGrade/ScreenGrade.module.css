@@ -1,0 +1,73 @@
+/* Екранний грейд: лежить поверх УСЬОГО (контент, хедер, 3D, відео) і нічого не ловить.
+   1001 — на одиницю вище за мобільне меню (1000), бо це не елемент інтерфейсу,
+   а обробка кадру: вона має накривати й відкриті меню. */
+.grade {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+/* Віньєтка: злегка притемнює кути, збираючи погляд до центру й поглиблюючи чорний. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 75% 65% at 50% 50%,
+    rgba(0, 0, 0, 0) 45%,
+    rgba(0, 0, 0, 0.28) 78%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* Зерно. На майже чорному фоні градієнти неминуче лягають смугами (banding) —
+   шум їх розбиває. Він же читається як шум сенсора, тобто працює на HUD-метафору.
+   Тайл 180×180 із feTurbulence, зсув по кроках дає мерехтіння майже задарма
+   (анімується лише background-position). */
+/* Мерехтіння робиться ВИКЛЮЧНО через transform — це єдина властивість, яку браузер
+   анімує на композиторі, без перемальовки. Анімація background-position тут коштувала
+   повноекранного repaint'у щокроку, і оскільки шар лежить поверх усього, разом із ним
+   переcomposився й WebGL-канвас: скрол просідав до ~18 fps.
+   Запас навколо в'юпорту — рівно стільки, скільки треба на зсув (≤2%), і не більше:
+   will-change промотує шар у власний композиторний буфер, а він оплачується площею.
+   Шар 200%×200% — це вчетверо більший за екран буфер, який переcompose'иться щокадру. */
+.grain {
+  position: absolute;
+  top: -4%;
+  left: -4%;
+  width: 108%;
+  height: 108%;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  animation: grainShift 0.7s steps(1) infinite;
+  will-change: transform;
+}
+
+@keyframes grainShift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-1.5%, 1.2%, 0);
+  }
+  40% {
+    transform: translate3d(2%, -0.8%, 0);
+  }
+  60% {
+    transform: translate3d(-0.9%, -2%, 0);
+  }
+  80% {
+    transform: translate3d(1.6%, 1.7%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Мерехтіння — це рух; хто його вимкнув, лишається зі статичним зерном. */
+@media (prefers-reduced-motion: reduce) {
+  .grain {
+    animation: none;
+  }
+}

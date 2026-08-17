@@ -6,6 +6,8 @@ import FeaturesSection from "./sections/FeaturesSection";
 import CTASection from "./sections/CTASection";
 import ContactSection from "./sections/ContactSection/ContactSection";
 
+import ScreenGrade from "@/shared/ScreenGrade";
+
 import HomeScene from "./scene/HomeScene";
 import { useHomeChoreography } from "./scene/useHomeChoreography";
 import { createChoreo } from "./scene/types";
@@ -36,6 +38,9 @@ const HomePage = () => {
       </div>
 
       <ContactSection />
+
+      {/* Обробка кадру — останнім шаром, поверх усього. */}
+      <ScreenGrade />
     </>
   );
 };

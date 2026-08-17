@@ -2,9 +2,6 @@
    Пишеться GSAP-ScrollTrigger'ами (поза Canvas), читається моделями в useFrame (у Canvas).
    Навмисно не React-стан — щоб скрол-скраб не викликав ре-рендерів. */
 
-// Точні назви кліпів усередині akm.glb (idle/diassemble/assemble — саме так у моделі).
-export type AkmClip = "idle" | "diassemble" | "assemble";
-
 export type Choreo = {
   /** 0 — дрон у Hero (центр), 1 — у About (десктоп: праворуч; мобайл: спуск по центру). */
   droneProgress: number;
@@ -13,14 +10,12 @@ export type Choreo = {
   droneVisible: boolean;
   /** Чи показувати АКМ (діапазон Features..CTA). */
   akmVisible: boolean;
-  /** Позиція АКМ: 0 = бокс Features, 1 = бокс CTA (переліт по скролу). */
+  /** 0..1 — прогрес піна Features. Веде повільний оберт «оглядового столу»; у цій
+      секції зброя лишається ЗІБРАНОЮ, розбирання тут не програється. */
+  akmSpin: number;
+  /** 0 = бокс Features (зібраний), 1 = бокс CTA (розібраний).
+      Веде одночасно переліт між слотами, доворот в оглядову позу і скраб розбирання. */
   akmFlow: number;
-  akmClip: AkmClip;
-  /** 0..1 — позиція в межах кліпу (для скрабу diassemble/assemble). */
-  akmScrub: number;
-  /** Орієнтація «інспекції» АКМ у Features (радіани): доворот та нахил зверху. */
-  akmYaw: number;
-  akmPitch: number;
 };
 
 export const createChoreo = (): Choreo => ({
@@ -28,12 +23,12 @@ export const createChoreo = (): Choreo => ({
   droneGap: 0,
   droneVisible: true,
   akmVisible: false,
+  akmSpin: 0,
   akmFlow: 0,
-  akmClip: "idle",
-  akmScrub: 0,
-  akmYaw: 0,
-  akmPitch: 0,
 });
+
+/** id порожнього DOM-боксу в Hero, у який вписується дрон (позиція + розмір задаються CSS). */
+export const DRONE_SLOT_ID = "drone-slot-hero";
 
 // id DOM-слотів, до боксів яких вписується АКМ (мають збігатися з розміткою секцій).
 export const AKM_SLOT_ID = {

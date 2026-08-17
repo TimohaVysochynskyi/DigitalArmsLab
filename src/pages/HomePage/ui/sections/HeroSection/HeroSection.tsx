@@ -17,20 +17,28 @@ const HeroSection = () => {
         >
           <source src={bgVideo} type="mp4" />
         </video>
-        <div className={css.hero}>
-          <div className={css.bgGradient} />
+        {/* Порожній якір для 3D-дрона: задає його позицію та габарит у Hero.
+            absolute → на потік не впливає; сам дрон малюється в overlay-канвасі. */}
+        <div id="drone-slot-hero" className={css.droneSlot} aria-hidden="true" />
 
+        <div className={css.hero}>
           <div className={css.titleWrapper}>
             <h1 className={css.title}>
-              <span>[ЛАБОРАТОРІЯ]</span>
-              <br /> БЕЗПЕЧНОГО МАЙБУТНЬОГО
+              <span className={css.titleMain}>[ЛАБОРАТОРІЯ]</span>
+              <span className={css.titleRow1}>БЕЗПЕЧНОГО</span>
+              <span className={css.titleRow2}>МАЙБУТНЬОГО</span>
             </h1>
             <p className={css.subtitle}>
-              Занурся у світ сучасних та історичних зразків озброєння.
+              Поринь у світ сучасних та історичних зразків озброєння.
             </p>
           </div>
 
-          <CTAButton>розпочати</CTAButton>
+          <div className={css.bottomWrapper}>
+            <CTAButton className={css.button}>розпочати</CTAButton>
+            <p className={css.subtitleMobile}>
+              Поринь у світ сучасних та історичних зразків озброєння.
+            </p>
+          </div>
         </div>
       </section>
     </>

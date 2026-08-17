@@ -20,27 +20,37 @@
   align-items: center;
   position: relative;
 }
+/* Картка вгорі зліва (див. .card), тож зброя забирає майже весь кадр під нею.
+   Обидва блоки абсолютні — інакше картка (position:absolute) і слот (у потоці)
+   накладались би, бо у флексі лишався б один елемент і його притискало б вліво. */
 .imageWrapper {
-  padding: 0 64px;
-  height: 100%;
+  position: absolute;
+  right: 0;
+  bottom: 4%;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
 }
+/* Слот 3D-АКМ: цей бокс і Є габаритом моделі — вона вписується в нього за принципом
+   `contain` і центрується по його центру. Розмір тут = розмір на екрані, один в один.
+   Пропорція — під ЗІБРАНУ зброю в опорному ракурсі (майже профіль). */
 .akmSlot {
-  height: 100%;
-  aspect-ratio: 578 / 1600;
-  max-width: 100%;
+  width: 96%;
+  aspect-ratio: 1872 / 677;
 }
 
 .card {
   flex-shrink: 0;
-  width: 560px;
-  height: 330px;
+  width: 940px;
+  height: auto;
   border: 1px solid var(--white-color);
   padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 28px;
   position: absolute;
-  right: 0;
+  left: 0;
+  top: 0;
 }
 .cardHeader {
   display: flex;

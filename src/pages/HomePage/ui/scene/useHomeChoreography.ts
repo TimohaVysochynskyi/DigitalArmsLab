@@ -11,22 +11,10 @@ import type { Choreo } from "./types";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const DEG = Math.PI / 180;
 const FEATURES_STEPS = 3;
 
 // Інерція скрабу (сек): рухи моделей плавні, але наздоганяють скрол.
 const SCRUB = 0.6;
-
-// Поза «інспекції» АКМ у Features: розворот у 3/4 з поглядом трохи зверху.
-const INSPECT_YAW = -20 * DEG;
-const INSPECT_PITCH = 18 * DEG;
-
-// Наскільки АКМ «розгорнутий в інспекцію» на кроці: 0→1 (розбірка), 1 (фріз), 1→0 (збірка).
-const inspectAmount = (step: number, stepProgress: number) => {
-  if (step === 0) return stepProgress;
-  if (step === 1) return 1;
-  return 1 - stepProgress;
-};
 
 export const useHomeChoreography = (
   choreoRef: RefObject<Choreo>,
@@ -37,11 +25,12 @@ export const useHomeChoreography = (
       const choreo = choreoRef.current;
       let lastStep = -1;
 
-      // --- Дрон: різна поведінка десктоп/мобайл (matchMedia авто-перебудовує на порозі 600) ---
+      // --- Дрон: різна поведінка десктоп/мобайл (matchMedia авто-перебудовує на порозі 768).
+      // Поріг має збігатися з MOBILE_MAX_WIDTH у DroneModel і з .droneGap у HomePage.module.css. ---
       const mm = gsap.matchMedia();
 
-      // Десктоп (>600): дрон летить у праву частину About і лишається з нею.
-      mm.add("(min-width: 601px)", () => {
+      // Десктоп (>768): дрон летить у праву частину About і лишається з нею.
+      mm.add("(min-width: 769px)", () => {
         ScrollTrigger.create({
           trigger: "#hero",
           start: "top bottom",
@@ -62,9 +51,9 @@ export const useHomeChoreography = (
         });
       });
 
-      // Мобайл (≤600): фаза 1 — спуск по центру через About; фаза 2 — доворот у вид згори
+      // Мобайл (≤768): фаза 1 — спуск по центру через About; фаза 2 — доворот у вид згори
       // в геп-зоні (#drone-gap). Видимий Hero..кінець гепа.
-      mm.add("(max-width: 600px)", () => {
+      mm.add("(max-width: 768px)", () => {
         ScrollTrigger.create({
           trigger: "#hero",
           start: "top bottom",
@@ -105,50 +94,31 @@ export const useHomeChoreography = (
         },
       });
 
-      // Features (візуальний пін — CSS sticky): 3 кроки. АКМ у своєму боксі (flow = 0):
-      // крок 0 — розбірка, крок 1 — фріз розібраного, крок 2 — збірка; + поза «інспекції».
+      // Features (візуальний пін — CSS sticky): 3 кроки картки. Зброя лишається ЗІБРАНОЮ,
+      // а прогрес усього піна веде безперервний оберт «оглядового столу» (див. AkmModel).
       ScrollTrigger.create({
         trigger: "#features",
         start: "top top",
         end: "bottom bottom",
         scrub: SCRUB,
-        onEnter: () => {
-          choreo.akmClip = "diassemble";
-          choreo.akmScrub = 0;
-          choreo.akmYaw = 0;
-          choreo.akmPitch = 0;
-        },
         onUpdate: (self) => {
           const step = Math.min(
             FEATURES_STEPS - 1,
             Math.floor(self.progress * FEATURES_STEPS),
           );
-          const stepProgress = self.progress * FEATURES_STEPS - step;
-
           if (step !== lastStep) {
             lastStep = step;
             onFeaturesStep(step);
           }
 
+          choreo.akmSpin = self.progress;
           choreo.akmFlow = 0;
-          if (step === 0) {
-            choreo.akmClip = "diassemble";
-            choreo.akmScrub = stepProgress;
-          } else if (step === 1) {
-            choreo.akmClip = "diassemble";
-            choreo.akmScrub = 1;
-          } else {
-            choreo.akmClip = "assemble";
-            choreo.akmScrub = stepProgress;
-          }
-
-          const inspect = inspectAmount(step, stepProgress);
-          choreo.akmYaw = INSPECT_YAW * inspect;
-          choreo.akmPitch = INSPECT_PITCH * inspect;
         },
       });
 
-      // Переліт АКМ Features → CTA (scroll-driven): від кінця Features до появи CTA у центрі.
+      // Features → CTA: переліт у бокс CTA, доворот в оглядову позу і РОЗБИРАННЯ —
+      // усе веде один прогрес, тож розбирання «в'їжджає» разом із секцією й реверсується
+      // при скролі вгору.
       ScrollTrigger.create({
         trigger: "#features",
         start: "bottom bottom",
@@ -157,7 +127,6 @@ export const useHomeChoreography = (
         scrub: SCRUB,
         onUpdate: (self) => {
           choreo.akmFlow = self.progress;
-          choreo.akmClip = "idle";
         },
       });
 

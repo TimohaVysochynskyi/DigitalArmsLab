@@ -1,11 +1,26 @@
-/* Дрібні математичні хелпери для scroll-хореографії 3D. */
+/* Математика 3D-хореографії HomePage.
+
+   Файл відповідає на три запитання:
+     1. Скільки і як інтерполювати (lerp / clamp01 / smoothstep / damp).
+     2. Який РЕАЛЬНИЙ силует має модель у заданій позі (modelBounds / modelSilhouettes).
+     3. Який масштаб і позиція потрібні, щоб цей силует рівно ліг у DOM-бокс (fitToBox).
+
+   Пункти 2–3 існують заради одного контракту проєкту: розмір і місце моделі задає CSS
+   (порожній div-слот у розмітці секції), а не константа в TS. */
 
 import { Matrix4, Vector3 } from "three";
 import type { Euler, Mesh, Object3D } from "three";
 
-export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/* ------------------------------------------------------------------ */
+/* Інтерполяція                                                        */
+/* ------------------------------------------------------------------ */
 
-export const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+/** Лінійна інтерполяція: t = 0 → from, t = 1 → to. */
+export const lerp = (from: number, to: number, t: number) =>
+  from + (to - from) * t;
+
+/** Обрізає значення до [0, 1] — захист від прогресів, що вийшли за межі. */
+export const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 /** Плавна S-крива (smoothstep) на [0, 1] — м'якший старт/фініш переходів. */
 export const smoothstep = (t: number) => t * t * (3 - 2 * t);
@@ -20,6 +35,19 @@ export const damp = (
   delta: number,
 ) => value + (target - value) * (1 - Math.exp(-rate * delta));
 
+/* ------------------------------------------------------------------ */
+/* Обхід геометрії                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Меш моделі разом із тим, що потрібно для коректного читання його вершин. */
+type DrawnMesh = {
+  mesh: Mesh;
+  /** Прапорці «цю вершину меш реально малює»; null — індексного буфера немає. */
+  usedVertices: Uint8Array | null;
+  /** Трансформ меша у ВЛАСНІЙ системі координат root'а. */
+  matrix: Matrix4;
+};
+
 /* Меші, які реально малюються, з матрицями у ВЛАСНІЙ системі координат root'а.
 
    Локальна система, а не світова, — принципово: світова протекла б поточними обертом і
@@ -30,12 +58,10 @@ export const damp = (
    спільний для кількох примітивів, тож в атрибуті лежать і «сироти» — вершини, яких цей
    меш не малює. Прохід по всьому атрибуту давав силует у півтора раза більший за те, що
    видно на екрані, і вписування в бокс через це зменшувало модель. */
-type DrawnMesh = { mesh: Mesh; used: Uint8Array | null; matrix: Matrix4 };
-
 const drawnMeshes = (root: Object3D): DrawnMesh[] => {
   root.updateWorldMatrix(true, true);
-  const toLocal = new Matrix4().copy(root.matrixWorld).invert();
-  const meshes: DrawnMesh[] = [];
+  const worldToRoot = new Matrix4().copy(root.matrixWorld).invert();
+  const result: DrawnMesh[] = [];
 
   root.traverse((object) => {
     const mesh = object as Mesh;
@@ -43,33 +69,45 @@ const drawnMeshes = (root: Object3D): DrawnMesh[] => {
     if (!mesh.isMesh || !position) return;
 
     const indices = mesh.geometry.index;
-    let used: Uint8Array | null = null;
+    let usedVertices: Uint8Array | null = null;
     if (indices) {
-      used = new Uint8Array(position.count);
-      for (let i = 0; i < indices.count; i++) used[indices.getX(i)] = 1;
+      usedVertices = new Uint8Array(position.count);
+      for (let i = 0; i < indices.count; i++) usedVertices[indices.getX(i)] = 1;
     }
 
-    meshes.push({
+    result.push({
       mesh,
-      used,
-      matrix: new Matrix4().multiplyMatrices(toLocal, mesh.matrixWorld),
+      usedVertices,
+      matrix: new Matrix4().multiplyMatrices(worldToRoot, mesh.matrixWorld),
     });
   });
 
-  return meshes;
+  return result;
+};
+
+/* ------------------------------------------------------------------ */
+/* Габарити моделі                                                     */
+/* ------------------------------------------------------------------ */
+
+export type ModelBounds = {
+  /** Центр габаритної коробки: на нього зсуваємо модель, щоб обертати навколо себе. */
+  pivot: Vector3;
+  /** Радіус описаної сфери — межа, за яку модель не вийде в жодній позі. */
+  radius: number;
 };
 
 /** Центр габаритів моделі та її радіус — обидва за один прохід, без тимчасових масивів. */
-export const modelBounds = (root: Object3D) => {
+export const modelBounds = (root: Object3D): ModelBounds => {
   const vertex = new Vector3();
   let minX = Infinity, maxX = -Infinity;
   let minY = Infinity, maxY = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
 
-  for (const { mesh, used, matrix } of drawnMeshes(root)) {
+  for (const { mesh, usedVertices, matrix } of drawnMeshes(root)) {
     const position = mesh.geometry.attributes.position;
+
     for (let i = 0; i < position.count; i++) {
-      if (used && !used[i]) continue;
+      if (usedVertices && !usedVertices[i]) continue;
 
       vertex.fromBufferAttribute(position, i).applyMatrix4(matrix);
       if (vertex.x < minX) minX = vertex.x;
@@ -88,22 +126,49 @@ export const modelBounds = (root: Object3D) => {
   );
   // Радіус описаної сфери: не залежить від повороту, тож ним безпечно задавати межі
   // бінів по глибині для БУДЬ-ЯКОЇ пози.
-  const radius =
-    Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2 || 1;
+  const radius = Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2 || 1;
 
   return { pivot, radius };
 };
 
+/* ------------------------------------------------------------------ */
+/* Профіль силуету                                                     */
+/* ------------------------------------------------------------------ */
+
+/* Силует моделі в одній позі, нарізаний на шари («біни») по глибині.
+
+   Зберігати всі вершини не потрібно й задорого: для вписування в бокс важать лише крайні
+   точки на кожному рівні глибини. Тому модель ділиться на binCount шарів уздовж осі
+   погляду, і від кожного шару лишається його габарит.
+   Усі масиви однакової довжини й індексуються паралельно: індекс i — це один шар. */
 export type Silhouette = {
-  z: Float32Array;
+  /** Найближча до камери глибина шару — саме вона визначає його перспективне збільшення. */
+  nearZ: Float32Array;
   minX: Float32Array;
   maxX: Float32Array;
   minY: Float32Array;
   maxY: Float32Array;
-  /** Габарит без урахування перспективи — стартова оцінка для ітерації. */
+  /** Габарит без урахування перспективи — стартова оцінка для ітерації fitToBox. */
   flatWidth: number;
   flatHeight: number;
 };
+
+/** Накопичувач по бінах для однієї пози: заповнюється під час проходу по вершинах. */
+type SilhouetteBins = {
+  nearZ: Float32Array;
+  minX: Float32Array;
+  maxX: Float32Array;
+  minY: Float32Array;
+  maxY: Float32Array;
+};
+
+const createBins = (binCount: number): SilhouetteBins => ({
+  nearZ: new Float32Array(binCount).fill(-Infinity),
+  minX: new Float32Array(binCount).fill(Infinity),
+  maxX: new Float32Array(binCount).fill(-Infinity),
+  minY: new Float32Array(binCount).fill(Infinity),
+  maxY: new Float32Array(binCount).fill(-Infinity),
+});
 
 /* Профілі силуету одразу для КІЛЬКОХ поз — одним проходом по геометрії.
 
@@ -119,80 +184,86 @@ export const modelSilhouettes = (
   poses: Euler[],
   binCount = 96,
 ): Silhouette[] => {
+  // Зсув у центр моделі + оберт у позу. Від меша не залежить, тож рахується один раз.
   const recenter = new Matrix4().makeTranslation(-pivot.x, -pivot.y, -pivot.z);
-  const span = radius * 2;
+  const poseMatrices = poses.map((pose) =>
+    new Matrix4().makeRotationFromEuler(pose).multiply(recenter),
+  );
 
-  const bins = poses.map(() => ({
-    z: new Float32Array(binCount).fill(-Infinity),
-    minX: new Float32Array(binCount).fill(Infinity),
-    maxX: new Float32Array(binCount).fill(-Infinity),
-    minY: new Float32Array(binCount).fill(Infinity),
-    maxY: new Float32Array(binCount).fill(-Infinity),
-  }));
+  const depthSpan = radius * 2;
+  const binsPerPose = poses.map(() => createBins(binCount));
+  // Матриці «поза × трансформ меша» — переписуються на кожному меші, а не алокуються заново.
+  const meshToPose = poses.map(() => new Matrix4());
 
-  const source = new Vector3();
-  const vertex = new Vector3();
+  const local = new Vector3();
+  const posed = new Vector3();
 
-  for (const { mesh, used, matrix } of drawnMeshes(root)) {
+  for (const { mesh, usedVertices, matrix } of drawnMeshes(root)) {
     const position = mesh.geometry.attributes.position;
-    // Оберт, рецентрування і трансформ меша згорнуті в одну матрицю на позу.
-    const combined = poses.map((pose) =>
-      new Matrix4().makeRotationFromEuler(pose).multiply(recenter).multiply(matrix),
-    );
+    for (let p = 0; p < poseMatrices.length; p++) {
+      meshToPose[p].multiplyMatrices(poseMatrices[p], matrix);
+    }
 
     for (let i = 0; i < position.count; i++) {
-      if (used && !used[i]) continue;
+      if (usedVertices && !usedVertices[i]) continue;
 
-      source.fromBufferAttribute(position, i);
-      for (let p = 0; p < combined.length; p++) {
-        vertex.copy(source).applyMatrix4(combined[p]);
+      local.fromBufferAttribute(position, i);
 
+      for (let p = 0; p < meshToPose.length; p++) {
+        posed.copy(local).applyMatrix4(meshToPose[p]);
+
+        // Глибина −radius..+radius → номер шару 0..binCount−1.
         const bin = Math.min(
           binCount - 1,
-          Math.max(0, Math.floor(((vertex.z + radius) / span) * binCount)),
+          Math.max(0, Math.floor(((posed.z + radius) / depthSpan) * binCount)),
         );
-        const slot = bins[p];
-        // За z у біні беремо НАЙБЛИЖЧИЙ до камери: він найсильніше збільшує, тож похибка
-        // квантування завжди в бік «трохи менша модель», і за бокс вона не вилізе.
-        if (vertex.z > slot.z[bin]) slot.z[bin] = vertex.z;
-        if (vertex.x < slot.minX[bin]) slot.minX[bin] = vertex.x;
-        if (vertex.x > slot.maxX[bin]) slot.maxX[bin] = vertex.x;
-        if (vertex.y < slot.minY[bin]) slot.minY[bin] = vertex.y;
-        if (vertex.y > slot.maxY[bin]) slot.maxY[bin] = vertex.y;
+        const bins = binsPerPose[p];
+
+        // За глибину шару беремо НАЙБЛИЖЧУ до камери точку: вона найсильніше збільшує,
+        // тож похибка квантування завжди в бік «трохи менша модель» — за бокс не вилізе.
+        if (posed.z > bins.nearZ[bin]) bins.nearZ[bin] = posed.z;
+        if (posed.x < bins.minX[bin]) bins.minX[bin] = posed.x;
+        if (posed.x > bins.maxX[bin]) bins.maxX[bin] = posed.x;
+        if (posed.y < bins.minY[bin]) bins.minY[bin] = posed.y;
+        if (posed.y > bins.maxY[bin]) bins.maxY[bin] = posed.y;
       }
     }
   }
 
-  return bins.map((slot) => {
-    // Порожні біни викидаємо, щоб не перевіряти їх на кожній ітерації вписування.
+  return binsPerPose.map((bins) => {
+    // Порожні шари викидаємо, щоб не перевіряти їх на кожній ітерації вписування.
     const filled: number[] = [];
     for (let bin = 0; bin < binCount; bin++) {
-      if (slot.maxX[bin] !== -Infinity) filled.push(bin);
+      if (bins.maxX[bin] !== -Infinity) filled.push(bin);
     }
 
-    const pick = (source: Float32Array) =>
-      Float32Array.from(filled, (bin) => source[bin]);
+    const compact = (values: Float32Array) =>
+      Float32Array.from(filled, (bin) => values[bin]);
 
     let flatMinX = Infinity, flatMaxX = -Infinity;
     let flatMinY = Infinity, flatMaxY = -Infinity;
     for (const bin of filled) {
-      if (slot.minX[bin] < flatMinX) flatMinX = slot.minX[bin];
-      if (slot.maxX[bin] > flatMaxX) flatMaxX = slot.maxX[bin];
-      if (slot.minY[bin] < flatMinY) flatMinY = slot.minY[bin];
-      if (slot.maxY[bin] > flatMaxY) flatMaxY = slot.maxY[bin];
+      if (bins.minX[bin] < flatMinX) flatMinX = bins.minX[bin];
+      if (bins.maxX[bin] > flatMaxX) flatMaxX = bins.maxX[bin];
+      if (bins.minY[bin] < flatMinY) flatMinY = bins.minY[bin];
+      if (bins.maxY[bin] > flatMaxY) flatMaxY = bins.maxY[bin];
     }
 
     return {
-      z: pick(slot.z),
-      minX: pick(slot.minX),
-      maxX: pick(slot.maxX),
-      minY: pick(slot.minY),
-      maxY: pick(slot.maxY),
+      nearZ: compact(bins.nearZ),
+      minX: compact(bins.minX),
+      maxX: compact(bins.maxX),
+      minY: compact(bins.minY),
+      maxY: compact(bins.maxY),
       flatWidth: flatMaxX - flatMinX || 1,
       flatHeight: flatMaxY - flatMinY || 1,
     };
   });
 };
+
+/* ------------------------------------------------------------------ */
+/* Вписування в бокс                                                   */
+/* ------------------------------------------------------------------ */
 
 export type BoxFit = {
   /** Масштаб моделі, за якого її видимий силует рівно вписаний у бокс. */
@@ -200,6 +271,14 @@ export type BoxFit = {
   /** Куди ставити групу (світові одиниці), щоб силует став по центру боксу. */
   positionX: number;
   positionY: number;
+};
+
+/** Екранний габарит силуету за конкретних масштабу й позиції. */
+type ProjectedSize = {
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
 };
 
 /* Вписування видимого силуету в бокс — з поправкою на перспективу.
@@ -214,7 +293,7 @@ export type BoxFit = {
    Величина нелінійна за scale, тож беремо плоску оцінку і кілька разів уточнюємо —
    ітерація стискаюча, 5 кроків сходяться із запасом.
 
-   Працює по профілю силуету (poseSilhouette), а не по всіх вершинах — тому дешево
+   Працює по профілю силуету (modelSilhouettes), а не по всіх вершинах — тому дешево
    настільки, що можна викликати щокадру. */
 export const fitToBox = (
   silhouette: Silhouette,
@@ -226,37 +305,44 @@ export const fitToBox = (
   targetY: number,
   iterations = 5,
 ): BoxFit => {
-  const { z, minX: sMinX, maxX: sMaxX, minY: sMinY, maxY: sMaxY } = silhouette;
+  const { nearZ, minX, maxX, minY, maxY } = silhouette;
 
-  const measure = (scale: number, px: number, py: number) => {
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
+  /** Проєктує всі шари силуету й повертає їхній спільний екранний габарит. */
+  const project = (
+    scale: number,
+    offsetX: number,
+    offsetY: number,
+  ): ProjectedSize => {
+    let left = Infinity;
+    let right = -Infinity;
+    let bottom = Infinity;
+    let top = -Infinity;
 
-    for (let i = 0; i < z.length; i++) {
-      const depth = cameraZ - scale * z[i];
-      // Захист від точок, що «пробили» камеру: фіт усе одно зійде на менший scale.
-      const factor = depth > cameraZ * 0.05 ? cameraZ / depth : 0;
-      const left = (px + sMinX[i] * scale) * factor;
-      const right = (px + sMaxX[i] * scale) * factor;
-      const bottom = (py + sMinY[i] * scale) * factor;
-      const top = (py + sMaxY[i] * scale) * factor;
-      if (left < minX) minX = left;
-      if (right > maxX) maxX = right;
-      if (bottom < minY) minY = bottom;
-      if (top > maxY) maxY = top;
+    for (let bin = 0; bin < nearZ.length; bin++) {
+      const distance = cameraZ - scale * nearZ[bin];
+      // Захист від шарів, що «пробили» камеру: фіт усе одно зійде на менший scale.
+      const magnify = distance > cameraZ * 0.05 ? cameraZ / distance : 0;
+
+      const binLeft = (offsetX + minX[bin] * scale) * magnify;
+      const binRight = (offsetX + maxX[bin] * scale) * magnify;
+      const binBottom = (offsetY + minY[bin] * scale) * magnify;
+      const binTop = (offsetY + maxY[bin] * scale) * magnify;
+
+      if (binLeft < left) left = binLeft;
+      if (binRight > right) right = binRight;
+      if (binBottom < bottom) bottom = binBottom;
+      if (binTop > top) top = binTop;
     }
 
     return {
-      width: maxX - minX || 1,
-      height: maxY - minY || 1,
-      centerX: (maxX + minX) / 2,
-      centerY: (maxY + minY) / 2,
+      width: right - left || 1,
+      height: top - bottom || 1,
+      centerX: (right + left) / 2,
+      centerY: (top + bottom) / 2,
     };
   };
 
-  // Плоска стартова оцінка — габарит без перспективи.
+  // Стартова оцінка — плоский габарит, без перспективи.
   let scale = Math.min(
     boxWidth / silhouette.flatWidth,
     boxHeight / silhouette.flatHeight,
@@ -264,11 +350,12 @@ export const fitToBox = (
   let positionX = targetX;
   let positionY = targetY;
 
-  for (let i = 0; i < iterations; i++) {
-    const measured = measure(scale, positionX, positionY);
-    scale *= Math.min(boxWidth / measured.width, boxHeight / measured.height);
-    positionX += targetX - measured.centerX;
-    positionY += targetY - measured.centerY;
+  for (let step = 0; step < iterations; step++) {
+    const projected = project(scale, positionX, positionY);
+    // Масштаб — за найтіснішим виміром (contain), позиція — на видиму похибку центра.
+    scale *= Math.min(boxWidth / projected.width, boxHeight / projected.height);
+    positionX += targetX - projected.centerX;
+    positionY += targetY - projected.centerY;
   }
 
   return { scale, positionX, positionY };

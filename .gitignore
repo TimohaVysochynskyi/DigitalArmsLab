@@ -25,3 +25,6 @@ dist-ssr
 
 # Нативний gltfpack для scripts/prepare-models.mjs (бінарник під платформу)
 tools/
+
+# Тимчасові файли замірів/аудиту
+scratchpad/

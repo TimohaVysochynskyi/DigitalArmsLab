@@ -24,7 +24,7 @@
 import { Suspense, useEffect, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Preload } from "@react-three/drei";
-import { ACESFilmicToneMapping } from "three";
+import { ACESFilmicToneMapping, Mesh, type Texture } from "three";
 import StudioEnvironment, { type LightingPreset } from "./StudioEnvironment";
 import css from "./Scene3D.module.css";
 
@@ -68,6 +68,78 @@ const FrameloopGate = ({ active }: { active: boolean }) => {
   return null;
 };
 
+/* Прогрів GPU поза кадром.
+
+   Без нього шейдер-програми й текстури важкої моделі (АКМ) компілювались і вивантажувались
+   на GPU СИНХРОННО на першому кадрі її появи у Features — це давало заморозку близько секунди
+   (дрон стрибав зі скролом, АКМ з'являвся лише після). Тут одноразово, у простої (коли Hero
+   вже намальовано), компілюємо всі програми сцени через compileAsync (він спирається на
+   KHR_parallel_shader_compile, тож не блокує головний потік) і вивантажуємо текстури через
+   initTexture. Коли глядач доскролює до Features, робити на гарячому кадрі вже нічого. */
+const TEXTURE_SLOTS = [
+  "map",
+  "normalMap",
+  "roughnessMap",
+  "metalnessMap",
+  "aoMap",
+  "emissiveMap",
+] as const;
+
+const SceneWarmup = () => {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+  const camera = useThree((state) => state.camera);
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const warm = async () => {
+      // Компіляція програм — паралельна й неблокуюча; без неї це стається в кадрі появи.
+      try {
+        await gl.compileAsync(scene, camera);
+      } catch {
+        // Прогрів не критичний: навіть без нього сцена працює, лише з разовим лагом.
+      }
+      if (cancelled) return;
+
+      // Аплоад текстур на GPU наперед, щоб і він не ліг на перший кадр моделі.
+      scene.traverse((object) => {
+        const mesh = object as Mesh;
+        if (!mesh.isMesh) return;
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+        for (const material of materials) {
+          const slots = material as unknown as Record<string, Texture | null>;
+          for (const slot of TEXTURE_SLOTS) {
+            const texture = slots[slot];
+            if (texture?.isTexture) gl.initTexture(texture);
+          }
+        }
+      });
+      invalidate();
+    };
+
+    const request = window.requestIdleCallback;
+    if (!request) {
+      const timer = window.setTimeout(warm, 200);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }
+
+    const handle = request(() => warm(), { timeout: 2000 });
+    return () => {
+      cancelled = true;
+      window.cancelIdleCallback?.(handle);
+    };
+  }, [gl, scene, camera, invalidate]);
+
+  return null;
+};
+
 const Scene3D = ({
   children,
   lighting = "showcase",
@@ -96,6 +168,8 @@ const Scene3D = ({
         <Suspense fallback={null}>
           <StudioEnvironment preset={lighting} />
           {children}
+          {/* Прогрів шейдерів/текстур у простої — після того, як діти (моделі) завантажені. */}
+          <SceneWarmup />
         </Suspense>
 
         <Preload all />

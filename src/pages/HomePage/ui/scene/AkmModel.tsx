@@ -18,7 +18,7 @@
    найширший ракурс) і далі тримається сталим: інакше модель «дихала» б розміром під час
    доворотів. Для CTA фіт рахується по РОЗІБРАНОМУ силуету, щоб деталі не вилізли за бокс. */
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useAnimations } from "@react-three/drei";
@@ -173,6 +173,39 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
   const silhouettes = useRef<{ features?: Silhouette; cta?: Silhouette }>({});
   const lastClip = useRef({ name: "", scrub: -1 });
 
+  /* Знімок обох силуетів. Кожен вимагає поставити відповідний кліп у потрібну точку
+     (idle для Features, кінець diassemble для CTA), тож порядок важливий; наприкінці
+     повертаємо зброю в idle. */
+  const computeSilhouettes = useMemo(
+    () => () => {
+      playClip(CLIP.idle, 0);
+      silhouettes.current.features = snapshot(TUNE.featuresPoses[0]);
+      playClip(CLIP.disassemble, 1);
+      silhouettes.current.cta = snapshot(TUNE.ctaPose);
+      playClip(CLIP.idle, 0);
+      lastClip.current = { name: CLIP.idle, scrub: 0 };
+    },
+    [playClip, snapshot],
+  );
+
+  /* Рахуємо профілі У ПРОСТОЇ, наперед — а не на першому видимому кадрі. Прохід по геометрії
+     двічі (features + cta) коштує помітного CPU-часу, і робити його в момент появи моделі
+     означало б повернути фриз рівно туди, звідки ми прибираємо лаг компіляції шейдерів. */
+  useEffect(() => {
+    if (silhouettes.current.features) return;
+    const run = () => {
+      if (!silhouettes.current.features) computeSilhouettes();
+    };
+    const request = window.requestIdleCallback;
+    if (!request) {
+      const timer = window.setTimeout(run, 200);
+      return () => clearTimeout(timer);
+    }
+
+    const handle = request(run, { timeout: 2000 });
+    return () => window.cancelIdleCallback?.(handle);
+  }, [computeSilhouettes]);
+
   /* Слот Features живе всередині `position: sticky`, тож його документна координата
      змінюється щопікселя скролу, а екранна — ні. Тому беремо ЖИВИЙ екранний rect і
      рахуємо фіт щокадру: по силуетному профілю це кілька сотень операцій. */
@@ -220,14 +253,10 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
       playClip(clip, scrub);
     }
 
-    // Перший кадр: знімаємо обидва силуети в реальному стані вузлів і повертаємо кліп.
+    // Страховка: якщо простій ще не встиг прорахувати силуети — рахуємо зараз (на практиці
+    // не спрацьовує, бо useEffect робить це задовго до появи моделі у Features).
     if (!silhouettes.current.features) {
-      playClip(CLIP.idle, 0);
-      silhouettes.current.features = snapshot(TUNE.featuresPoses[0]);
-
-      playClip(CLIP.disassemble, 1);
-      silhouettes.current.cta = snapshot(TUNE.ctaPose);
-
+      computeSilhouettes();
       playClip(clip, scrub);
       group.visible = false;
       return;

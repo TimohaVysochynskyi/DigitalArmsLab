@@ -1,8 +1,11 @@
 /* Збирає 3D-шар HomePage: overlay-Canvas (shared/Scene3D) + моделі.
 
-   Моделі монтуються не разом: на першому екрані потрібен лише дрон, і АКМ, змонтований
-   одразу, забирав би в нього мережу та головний потік саме тоді, коли глядач дивиться на
-   Hero. АКМ під'їжджає, коли користувач наближається до Features.
+   Весь шар монтується вже після першого екрана (useIdle у HomePage), тож на Hero він
+   мережу й потік не забирає. Обидві моделі монтуються РАЗОМ: після переходу на KTX2 вони
+   легкі (drone 1.2 МБ + akm 1.9 МБ), а щойно вони завантажені, Scene3D у простої прогріває
+   їхні шейдери й текстури (SceneWarmup). Тому колишнє відкладене підвантаження АКМ «під час
+   наближення» більше не потрібне — воно лише переносило лаг компіляції на момент появи
+   моделі у Features; тепер до цього моменту все вже прогріте.
 
    Рендер зупиняється, щойно 3D виходить за межі кадру (Contacts) або вкладку сховано —
    решту сторінки немає сенсу оплачувати шістдесятьма кадрами на секунду.
@@ -16,13 +19,10 @@ import type { RefObject } from "react";
 import Scene3D from "@/shared/Scene3D";
 import DroneModel from "./DroneModel";
 import AkmModel from "./AkmModel";
-import { useApproaching } from "./useApproaching";
 import { useSceneActivity } from "./useSceneActivity";
 import { useHomeChoreography } from "./useHomeChoreography";
 import type { Choreo } from "./types";
 
-/** Секція, до якої прив'язана поява АКМ (він живе у Features та CTA). */
-const AKM_SECTION_ID = "features";
 /** Секція, з появою якої 3D остаточно виходить із кадру. */
 const SCENE_END_SECTION_ID = "contact";
 
@@ -33,7 +33,6 @@ type HomeSceneProps = {
 };
 
 const HomeScene = ({ choreoRef, onFeaturesStep }: HomeSceneProps) => {
-  const akmReady = useApproaching(AKM_SECTION_ID);
   const active = useSceneActivity(SCENE_END_SECTION_ID);
 
   useHomeChoreography(choreoRef, onFeaturesStep);
@@ -41,7 +40,7 @@ const HomeScene = ({ choreoRef, onFeaturesStep }: HomeSceneProps) => {
   return (
     <Scene3D active={active}>
       <DroneModel choreoRef={choreoRef} />
-      {akmReady && <AkmModel choreoRef={choreoRef} />}
+      <AkmModel choreoRef={choreoRef} />
     </Scene3D>
   );
 };

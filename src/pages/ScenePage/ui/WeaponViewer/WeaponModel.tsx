@@ -9,12 +9,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useAnimations } from "@react-three/drei";
 import { Box3, Group, LoopOnce, Sphere, Vector3 } from "three";
 import { useGltfModel, useTunedMaterials } from "@/shared/Scene3D";
-import {
-  ASSEMBLY_CLIPS,
-  DEFAULT_ORBIT,
-  MODEL_FACING,
-  MODEL_RADIUS,
-} from "./viewer.config";
+import { ASSEMBLY_CLIPS, DEFAULT_ORBIT, MODEL_RADIUS } from "./viewer.config";
 import {
   orbitDirection,
   projectVertices,
@@ -25,7 +20,6 @@ import {
    відбиття гасимо лише настільки, щоб прибрати мерехтіння блиску, не з'їдаючи деталь. */
 const MATERIALS = { envMapIntensity: 0.5, normalScale: 0.9, roughnessBoost: 1.1 };
 
-const NO_FACING: [number, number, number] = [0, 0, 0];
 const FADE = 0.2;
 
 type WeaponModelProps = {
@@ -119,9 +113,7 @@ const WeaponModel = ({
 
   return (
     <group ref={root} scale={fit.scale}>
-      <group rotation={MODEL_FACING[url] ?? NO_FACING}>
-        <primitive object={scene} position={fit.offset} />
-      </group>
+      <primitive object={scene} position={fit.offset} />
     </group>
   );
 };

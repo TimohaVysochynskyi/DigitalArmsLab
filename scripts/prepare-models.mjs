@@ -27,6 +27,8 @@ import { existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
+import { rotateGlbY } from "./rotate-glb.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sources = join(root, "models-src");
 const output = join(root, "public", "models");
@@ -36,16 +38,20 @@ const GLTFPACK = process.env.GLTFPACK ?? join(root, "tools", "gltfpack.exe");
 /* HomePage бере моделі зі стелею 1024: там АКМ і дрон ніколи не більші за ~1500px у кадрі,
    а 2048 коштували б учетверо дорожче на першому екрані.
    ScenePage — окремі збірки на 2048: там модель на весь в'юпорт і зум до ~3×. */
+/* rotateY — доворот, який вшивається в готовий файл (див. rotate-glb.mjs). Потрібен лише
+   там, де модель лежить у своєму .glb інакше, ніж решта: АКМ довший за інших на 90° по Y,
+   і без цього довороту сцена не мала б спільного ракурсу для всіх одиниць. Стосується
+   ТІЛЬКИ збірки для ScenePage: HomePage кадрує АКМ власною хореографією. */
 const MODELS = [
   { source: "akm", target: "akm.ktx2.glb", textureLimit: 1024 },
   { source: "mavic", target: "drone.ktx2.glb", textureLimit: 1024 },
 
-  { source: "akm", target: "akm-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "akm", target: "akm-2048.ktx2.glb", textureLimit: 2048, rotateY: -180 },
   { source: "mavic", target: "mavic-2048.ktx2.glb", textureLimit: 2048 },
   { source: "ar15", target: "ar15-2048.ktx2.glb", textureLimit: 2048 },
   { source: "makarov", target: "makarov-2048.ktx2.glb", textureLimit: 2048 },
   { source: "beretta-92", target: "beretta-92-2048.ktx2.glb", textureLimit: 2048 },
-  { source: "f-1", target: "f-1-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "f1", target: "f1-2048.ktx2.glb", textureLimit: 2048 },
   { source: "m67", target: "m67-2048.ktx2.glb", textureLimit: 2048 },
   { source: "fpv", target: "fpv-2048.ktx2.glb", textureLimit: 2048 },
 ];
@@ -60,7 +66,7 @@ if (!existsSync(GLTFPACK)) {
   process.exit(1);
 }
 
-for (const { source, target, textureLimit } of MODELS) {
+for (const { source, target, textureLimit, rotateY } of MODELS) {
   const from = join(sources, `${source}.glb`);
   const to = join(output, target);
 
@@ -75,5 +81,6 @@ for (const { source, target, textureLimit } of MODELS) {
     ["-i", from, "-o", to, "-tc", "-tq", "9", "-tl", String(textureLimit), "-c"],
     { stdio: ["ignore", "ignore", "inherit"] },
   );
-  console.log(`${mb(to)} МБ`);
+  if (rotateY) rotateGlbY(to, rotateY);
+  console.log(`${mb(to)} МБ${rotateY ? `, доворот ${rotateY}°` : ""}`);
 }

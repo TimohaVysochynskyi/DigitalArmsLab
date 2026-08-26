@@ -36,6 +36,18 @@ export type ArsenalSlider = {
 const wrap = (value: number, length: number) =>
   length ? ((value % length) + length) % length : 0;
 
+/* Сторінка, у якій лежить картка. Слайдер гортається вікнами по visibleSlides, і відлік
+   ведеться ВІД ПОЧАТКУ КАТЕГОРІЇ — інакше у в'юпорт потрапили б одиниці з двох різних
+   категорій. Активна картка при цьому лишається видимою: на вузьких екранах, де вікно
+   дорівнює одній картці, сторінка збігається з нею. */
+const pageStart = (weapons: Weapon[], index: number, perPage: number) => {
+  const categoryStart = weapons.findIndex(
+    (weapon) => weapon.categoryId === weapons[index].categoryId,
+  );
+
+  return categoryStart + Math.floor((index - categoryStart) / perPage) * perPage;
+};
+
 const readVisibleSlides = (element: HTMLElement) => {
   const value = Number.parseInt(
     getComputedStyle(element).getPropertyValue("--visible-slides"),
@@ -71,17 +83,23 @@ export const useArsenalSlider = (
   const activeWeapon = weapons[wrap(activeSlideIndex, total)] ?? null;
   const activeCategoryId = weapons[wrap(position, total)]?.categoryId ?? "";
 
-  // Стартова позиція: середня копія списку, зсунута на потрібну одиницю.
+  /* Стартова позиція: середня копія списку, зсунута на потрібну одиницю. Вибір стає
+     активним, а трек — на сторінку, у якій ця одиниця лежить (розмір вікна читаємо з CSS
+     тим самим способом, що й measure(), який уже відпрацював у цьому ж коміті). */
   useEffect(() => {
     if (!total) return;
 
     const requested = initialWeaponId ?? readLastWeaponId();
-    const start =
-      total + Math.max(0, weapons.findIndex((weapon) => weapon.id === requested));
+    const index = Math.max(
+      0,
+      weapons.findIndex((weapon) => weapon.id === requested),
+    );
+    const viewport = trackRef.current?.parentElement;
+    const perPage = viewport ? readVisibleSlides(viewport) : 1;
 
     setIsAnimated(false);
-    setPosition(start);
-    setActiveSlideIndex(start);
+    setPosition(total + pageStart(weapons, index, perPage));
+    setActiveSlideIndex(total + index);
   }, [total, weapons, initialWeaponId]);
 
   useEffect(() => {

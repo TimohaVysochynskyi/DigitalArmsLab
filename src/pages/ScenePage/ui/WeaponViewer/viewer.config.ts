@@ -13,8 +13,10 @@ export const MODEL_RADIUS = 1;
    1 = впритул до країв, 0.9 = 10% запасу. */
 export const FRAME_FILL = 0.95;
 
-/** Дефолтна орбіта камери (сферичні кути, радіани). */
-export const DEFAULT_ORBIT = { theta: Math.PI * 0.1, phi: Math.PI * 0.44 };
+/* Дефолтна орбіта камери (сферичні кути, радіани). Азимут довернуто на 90° проти
+   попереднього: усі моделі лежать у своїх файлах довгою віссю по Z, тож саме з цього боку
+   зброя видно профілем, а не з торця. */
+export const DEFAULT_ORBIT = { theta: Math.PI * -0.4, phi: Math.PI * 0.44 };
 
 /** Межі зуму — множники до fit-дистанції (min менший = ближче можна під'їхати). */
 export const ZOOM_LIMITS = { min: 0.3, max: 2.2 };
@@ -27,10 +29,9 @@ export const RESET_DURATION = 0.8;
 
 export const AUTO_ROTATE_SPEED = 1.2;
 
-/** Стартовий доворот моделі, щоб вона дивилась профілем до глядача. */
-export const MODEL_FACING: Record<string, [number, number, number]> = {
-  "/models/akm-2048.ktx2.glb": [0, -Math.PI / 2, 0],
-};
+/* Орієнтації моделей у коді НЕМАЄ: усі одиниці приведені до спільного напрямку в самих
+   .glb (`rotateY` у scripts/prepare-models.mjs). Якщо чергова модель дивиться не туди —
+   доворот вшивається у файл там, а не таблицею винятків тут. */
 
 /** Можливі назви кліпів розбирання/збирання (у akm.glb — саме "diassemble"). */
 export const ASSEMBLY_CLIPS = {

@@ -9,6 +9,9 @@ import css from "./CTASection.module.css";
 // Чутливість ручного обертання (радіан на піксель перетягування) + межа нахилу.
 const ROTATE_SENSITIVITY = 0.008;
 const MAX_PITCH = (75 * Math.PI) / 180;
+// На телефоні (≤600) ручний оберт вимкнено: високий слот перехоплював би вертикальний
+// скрол, і сторінку було б важко прокрутити далі. Поріг збігається з CTA_VERTICAL_MAX_WIDTH.
+const MANUAL_ROTATE_MIN_WIDTH = 601;
 
 type CTASectionProps = {
   choreoRef: RefObject<Choreo>;
@@ -32,6 +35,8 @@ const CTASection = ({ choreoRef }: CTASectionProps) => {
       Math.min(max, Math.max(min, v));
 
     const onDown = (e: PointerEvent) => {
+      // На телефоні не перехоплюємо жест — інакше не проскролити повз високу модель.
+      if (window.innerWidth < MANUAL_ROTATE_MIN_WIDTH) return;
       dragging = true;
       lastX = e.clientX;
       lastY = e.clientY;

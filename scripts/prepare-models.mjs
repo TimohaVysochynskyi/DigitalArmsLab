@@ -1,19 +1,21 @@
-/* Підготовка 3D-моделей до вебу: з вихідних .glb робить ті, що реально їдуть у прод.
+/* Підготовка 3D-моделей до вебу: з вихідних .glb у models-src/ робить ті, що їдуть у прод.
 
    Навіщо. Вихідні моделі носять текстури в PNG/JPEG. Такі текстури браузер РОЗПАКОВУЄ на
    CPU і кладе в пам'ять GPU нестисненими (RGBA8): на дві моделі це було ~96 МБ відеопам'яті
    і майже 6 секунд блокування головного потоку на середньому телефоні. KTX2/BasisU їде в GPU
    вже стисненим — без розпакування і в ~8 разів компактніше.
 
+   Вихідні лежать ПОЗА public/: усе з public/ копіюється в dist як є, і оригінали (десятки МБ)
+   їхали б у прод мертвою вагою.
+
    Прапорці:
      -tc        текстури → KTX2 з BasisU (ETC1S);
      -tq 9      якість кодування (1..10); нижче 9 на нормал-мапах видно бруд;
-     -tl 1024   стеля роздільності. Порівняння 2048 vs 1024 на дроні в Hero різниці не
-                показало (він і в найбільшому кадрі ~1500px), а вага впала з 6.9 до 1.15 МБ;
+     -tl <N>    стеля роздільності (див. textureLimit нижче);
      -c         meshopt-стиснення геометрії (декодер уже підключений через drei).
 
-   Джерело — саме вихідні .glb, а не *.opt.glb: ті вже квантовані, і повторна упаковка
-   накладала б похибку квантування вдруге (gltfpack про це прямо попереджає).
+   Draco. gltfpack не читає KHR_draco_mesh_compression. Єдина така модель (makarov) лежить
+   у models-src/ уже розпакованою через `npx gltf-transform copy`.
 
    Інструмент. Потрібен НАТИВНИЙ gltfpack: npm-збірка йде без кодувальника BasisU.
    Один файл, нікуди не встановлюється:
@@ -26,13 +28,27 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const models = join(root, "public", "models");
+const sources = join(root, "models-src");
+const output = join(root, "public", "models");
 
 const GLTFPACK = process.env.GLTFPACK ?? join(root, "tools", "gltfpack.exe");
 
-/** Стеля роздільності текстур на модель — підбирається за найбільшим кадром, у якому
-    модель реально показується. */
-const MODELS = [{ name: "drone", textureLimit: 1024 }, { name: "akm", textureLimit: 1024 }];
+/* HomePage бере моделі зі стелею 1024: там АКМ і дрон ніколи не більші за ~1500px у кадрі,
+   а 2048 коштували б учетверо дорожче на першому екрані.
+   ScenePage — окремі збірки на 2048: там модель на весь в'юпорт і зум до ~3×. */
+const MODELS = [
+  { source: "akm", target: "akm.ktx2.glb", textureLimit: 1024 },
+  { source: "mavic", target: "drone.ktx2.glb", textureLimit: 1024 },
+
+  { source: "akm", target: "akm-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "mavic", target: "mavic-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "ar15", target: "ar15-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "makarov", target: "makarov-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "beretta-92", target: "beretta-92-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "f-1", target: "f-1-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "m67", target: "m67-2048.ktx2.glb", textureLimit: 2048 },
+  { source: "fpv", target: "fpv-2048.ktx2.glb", textureLimit: 2048 },
+];
 
 const mb = (path) => (statSync(path).size / 1048576).toFixed(2);
 
@@ -44,20 +60,20 @@ if (!existsSync(GLTFPACK)) {
   process.exit(1);
 }
 
-for (const { name, textureLimit } of MODELS) {
-  const source = join(models, `${name}.glb`);
-  const target = join(models, `${name}.ktx2.glb`);
+for (const { source, target, textureLimit } of MODELS) {
+  const from = join(sources, `${source}.glb`);
+  const to = join(output, target);
 
-  if (!existsSync(source)) {
-    console.error(`Немає вихідної моделі: ${source}`);
+  if (!existsSync(from)) {
+    console.error(`Немає вихідної моделі: ${from}`);
     process.exit(1);
   }
 
-  process.stdout.write(`${name}: ${mb(source)} МБ → `);
+  process.stdout.write(`${target}: ${mb(from)} МБ → `);
   execFileSync(
     GLTFPACK,
-    ["-i", source, "-o", target, "-tc", "-tq", "9", "-tl", String(textureLimit), "-c"],
+    ["-i", from, "-o", to, "-tc", "-tq", "9", "-tl", String(textureLimit), "-c"],
     { stdio: ["ignore", "ignore", "inherit"] },
   );
-  console.log(`${mb(target)} МБ`);
+  console.log(`${mb(to)} МБ`);
 }

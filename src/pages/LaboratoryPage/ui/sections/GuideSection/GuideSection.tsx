@@ -1,9 +1,15 @@
+import type { Weapon } from "@/features/arsenal";
+
 import AudioPlayer from "./AudioPlayer";
 import css from "./GuideSection.module.css";
 
 import guideImage from "@/assets/images/guide.webp";
 
-const GuideSection = () => {
+type GuideSectionProps = {
+  weapon: Weapon | null;
+};
+
+const GuideSection = ({ weapon }: GuideSectionProps) => {
   return (
     <>
       <div className={css.container}>
@@ -15,9 +21,9 @@ const GuideSection = () => {
           <p className={css.title}>[ Голосовий гід ]</p>
           <p className={css.description}>
             Розказує про модель <br />
-            <span>П. Макарова</span>
+            <span>{weapon?.name ?? ""}</span>
           </p>
-          <AudioPlayer className={css.audioPlayer} />
+          <AudioPlayer className={css.audioPlayer} src={weapon?.audioUrl} />
         </div>
       </div>
     </>

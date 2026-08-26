@@ -11,6 +11,8 @@ import {
 
 import type { ArsenalData, Weapon, WeaponCategoryId } from "@/features/arsenal";
 
+import { readLastWeaponId, rememberWeaponId } from "./arsenalMemory";
+
 const COPIES = 3;
 
 const NO_WEAPONS: Weapon[] = [];
@@ -18,6 +20,8 @@ const NO_WEAPONS: Weapon[] = [];
 export type ArsenalSlider = {
   slides: Weapon[];
   activeSlideIndex: number;
+  /** Вибрана одиниця зброї. */
+  activeWeapon: Weapon | null;
   activeCategoryId: WeaponCategoryId;
   offset: number;
   isAnimated: boolean;
@@ -41,7 +45,12 @@ const readVisibleSlides = (element: HTMLElement) => {
   return Number.isFinite(value) && value > 0 ? value : 1;
 };
 
-export const useArsenalSlider = (data: ArsenalData | null): ArsenalSlider => {
+/* initialWeaponId — з якої одиниці відкрити слайдер (напр. повернення зі сцени). Якщо не
+   задано, беремо запам'ятовану в сеансі; якщо і її немає — перший слайд. */
+export const useArsenalSlider = (
+  data: ArsenalData | null,
+  initialWeaponId?: string,
+): ArsenalSlider => {
   const weapons = data?.weapons ?? NO_WEAPONS;
   const total = weapons.length;
 
@@ -59,15 +68,25 @@ export const useArsenalSlider = (data: ArsenalData | null): ArsenalSlider => {
     [weapons],
   );
 
+  const activeWeapon = weapons[wrap(activeSlideIndex, total)] ?? null;
   const activeCategoryId = weapons[wrap(position, total)]?.categoryId ?? "";
 
+  // Стартова позиція: середня копія списку, зсунута на потрібну одиницю.
   useEffect(() => {
     if (!total) return;
 
+    const requested = initialWeaponId ?? readLastWeaponId();
+    const start =
+      total + Math.max(0, weapons.findIndex((weapon) => weapon.id === requested));
+
     setIsAnimated(false);
-    setPosition(total);
-    setActiveSlideIndex(total);
-  }, [total]);
+    setPosition(start);
+    setActiveSlideIndex(start);
+  }, [total, weapons, initialWeaponId]);
+
+  useEffect(() => {
+    if (activeWeapon) rememberWeaponId(activeWeapon.id);
+  }, [activeWeapon]);
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -195,6 +214,7 @@ export const useArsenalSlider = (data: ArsenalData | null): ArsenalSlider => {
   return {
     slides,
     activeSlideIndex,
+    activeWeapon,
     activeCategoryId,
     offset,
     isAnimated,

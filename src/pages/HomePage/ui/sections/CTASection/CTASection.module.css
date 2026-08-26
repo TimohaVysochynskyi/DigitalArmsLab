@@ -30,7 +30,7 @@
 
 @media screen and (max-width: 1024px) {
   .sectionWrapper {
-    padding: 40px 80px;
+    padding: 80px 80px 40px 80px;
     min-height: 660px;
   }
   .section {
@@ -40,7 +40,7 @@
 
 @media screen and (max-width: 768px) {
   .sectionWrapper {
-    padding: 40px;
+    padding: 80px 40px 40px 40px;
   }
   .visionScanner {
     display: none;
@@ -49,7 +49,7 @@
 
 @media screen and (max-width: 600px) {
   .sectionWrapper {
-    padding: 40px 24px;
+    padding: 80px 24px 40px 24px;
   }
   /* ≤600 зброя ВЕРТИКАЛЬНА (див. AkmModel) — слот стає ВИСОКИМ, щоб довжина зброї
      заповнювала екран і модель була великою. Ширина повна, висота — під в'юпорт (з місцем
@@ -58,5 +58,9 @@
     width: 100%;
     height: min(62vh, 540px);
     aspect-ratio: auto;
+    /* На телефоні ручний оберт вимкнено (див. CTASection.tsx) — повертаємо звичайний скрол
+       і прибираємо grab-курсор, щоб високий слот не заважав прокрутці. */
+    touch-action: auto;
+    cursor: default;
   }
 }

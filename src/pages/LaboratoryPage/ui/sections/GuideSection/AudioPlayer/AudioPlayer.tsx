@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 
+import { loadWaveform, resampleWaveform } from "./waveform";
 import css from "./AudioPlayer.module.css";
 
 /* Риски мають фіксовану ширину — при зміні ширини компонента змінюється їхня кількість. */
@@ -8,27 +18,19 @@ const BAR_GAP = 3;
 const BAR_MIN_HEIGHT = 4;
 const BAR_MAX_HEIGHT = 28;
 
-/** Демо-тривалість (сек), поки немає реального файлу. */
-const DEMO_DURATION = 30;
+/** Хвиля перетікає в нову форму зі зсувом по індексу — виходить пробіг зліва направо. */
+const MORPH_STAGGER = 4;
+const MORPH_STAGGER_CAP = 240;
 
 const SEEK_STEP = 0.05;
 
-/** Детермінований шум: висота риски не стрибає при ресайзі. */
-const noise = (index: number) => {
-  const value = Math.sin((index + 1) * 12.9898) * 43758.5453;
-  return value - Math.floor(value);
-};
-
-const barHeight = (index: number) => {
-  const envelope = 0.55 + 0.45 * Math.sin(index * 0.35);
-  const amplitude = 0.25 + 0.75 * noise(index) * envelope;
-  return Math.round(BAR_MIN_HEIGHT + (BAR_MAX_HEIGHT - BAR_MIN_HEIGHT) * amplitude);
-};
-
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
+const barHeight = (level: number) =>
+  Math.round(BAR_MIN_HEIGHT + clamp01(level) * (BAR_MAX_HEIGHT - BAR_MIN_HEIGHT));
+
 type AudioPlayerProps = {
-  /** Джерело аудіо. Поки його немає — плеєр програє демо-таймлайн. */
+  /** Джерело аудіо. Немає — плеєр показується неактивним. */
   src?: string;
   className?: string;
   onPlayChange?: (isPlaying: boolean) => void;
@@ -38,23 +40,20 @@ const AudioPlayer = ({ src, className, onPlayChange }: AudioPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [barCount, setBarCount] = useState(0);
+  const [peaks, setPeaks] = useState<number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const waveRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef(0);
 
-  const applyProgress = useCallback((value: number) => {
-    progressRef.current = value;
-    setProgress(value);
+  const isDisabled = !src;
+
+  const onPlayChangeRef = useRef(onPlayChange);
+  onPlayChangeRef.current = onPlayChange;
+
+  const changePlaying = useCallback((next: boolean) => {
+    setIsPlaying(next);
+    onPlayChangeRef.current?.(next);
   }, []);
-
-  const changePlaying = useCallback(
-    (next: boolean) => {
-      setIsPlaying(next);
-      onPlayChange?.(next);
-    },
-    [onPlayChange],
-  );
 
   useLayoutEffect(() => {
     const node = waveRef.current;
@@ -69,75 +68,91 @@ const AudioPlayer = ({ src, className, onPlayChange }: AudioPlayerProps) => {
     return () => observer.disconnect();
   }, []);
 
+  // Профіль гучності нової доріжки. Старий лишається на екрані, доки не приїде новий.
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (!src) {
+      setPeaks([]);
+      return;
+    }
 
-    const handleTimeUpdate = () =>
-      applyProgress(audio.duration ? clamp01(audio.currentTime / audio.duration) : 0);
-    const handleEnded = () => {
-      applyProgress(0);
-      changePlaying(false);
-    };
-
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("ended", handleEnded);
+    let isCurrent = true;
+    void loadWaveform(src).then((loaded) => {
+      if (isCurrent) setPeaks(loaded);
+    });
 
     return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("ended", handleEnded);
+      isCurrent = false;
     };
-  }, [src, applyProgress, changePlaying]);
+  }, [src]);
 
+  /* Нова зброя — доріжка з початку і на паузі. Клінап зупиняє попередній елемент:
+     без нього відʼєднаний <audio> (перехід на дрона) продовжував би грати. */
   useEffect(() => {
-    if (src || !isPlaying) return;
+    const audio = audioRef.current;
+
+    setProgress(0);
+    changePlaying(false);
+    if (audio) audio.currentTime = 0;
+
+    return () => audio?.pause();
+  }, [src, changePlaying]);
+
+  /* Прогрес знімаємо покадрово, а не з timeupdate: той спрацьовує 4 рази на секунду
+     і риски перемикались би ривками. */
+  useEffect(() => {
+    if (!isPlaying) return;
 
     let frame = 0;
-    let prev = performance.now();
+    const tick = () => {
+      const audio = audioRef.current;
+      if (audio?.duration) setProgress(clamp01(audio.currentTime / audio.duration));
 
-    const tick = (now: number) => {
-      const next = progressRef.current + (now - prev) / 1000 / DEMO_DURATION;
-      prev = now;
-
-      if (next >= 1) {
-        applyProgress(0);
-        changePlaying(false);
-        return;
-      }
-
-      applyProgress(next);
       frame = requestAnimationFrame(tick);
     };
 
     frame = requestAnimationFrame(tick);
-
     return () => cancelAnimationFrame(frame);
-  }, [src, isPlaying, applyProgress, changePlaying]);
+  }, [isPlaying]);
+
+  const levels = useMemo(
+    () => resampleWaveform(peaks, barCount),
+    [peaks, barCount],
+  );
 
   const togglePlay = () => {
-    const next = !isPlaying;
-    changePlaying(next);
-
     const audio = audioRef.current;
     if (!audio) return;
-    if (next) void audio.play();
-    else audio.pause();
+
+    if (isPlaying) {
+      audio.pause();
+      changePlaying(false);
+      return;
+    }
+
+    void audio.play().then(
+      () => changePlaying(true),
+      () => changePlaying(false),
+    );
   };
 
   const seekTo = (ratio: number) => {
     const value = clamp01(ratio);
-    applyProgress(value);
+    setProgress(value);
 
     const audio = audioRef.current;
     if (audio?.duration) audio.currentTime = value * audio.duration;
   };
 
-  const handleWaveClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleWaveClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (isDisabled) return;
+
     const { left, width } = event.currentTarget.getBoundingClientRect();
     if (width) seekTo((event.clientX - left) / width);
   };
 
-  const handleWaveKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleWaveKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isDisabled) return;
+
     if (event.key === "ArrowRight") seekTo(progress + SEEK_STEP);
     else if (event.key === "ArrowLeft") seekTo(progress - SEEK_STEP);
     else return;
@@ -147,13 +162,26 @@ const AudioPlayer = ({ src, className, onPlayChange }: AudioPlayerProps) => {
 
   return (
     <>
-      <div className={`${css.player} ${className ?? ""}`}>
-        {src && <audio ref={audioRef} src={src} preload="metadata" />}
+      <div
+        className={`${css.player} ${isDisabled ? css.playerDisabled : ""} ${className ?? ""}`}
+      >
+        {src && (
+          <audio
+            ref={audioRef}
+            src={src}
+            preload="metadata"
+            onEnded={() => {
+              setProgress(0);
+              changePlaying(false);
+            }}
+          />
+        )}
 
         <button
           type="button"
           className={css.button}
           onClick={togglePlay}
+          disabled={isDisabled}
           aria-label={isPlaying ? "Пауза" : "Відтворити"}
           aria-pressed={isPlaying}
         >
@@ -175,8 +203,9 @@ const AudioPlayer = ({ src, className, onPlayChange }: AudioPlayerProps) => {
           onClick={handleWaveClick}
           onKeyDown={handleWaveKeyDown}
           role="slider"
-          tabIndex={0}
+          tabIndex={isDisabled ? -1 : 0}
           aria-label="Позиція відтворення"
+          aria-disabled={isDisabled}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(progress * 100)}
@@ -188,7 +217,11 @@ const AudioPlayer = ({ src, className, onPlayChange }: AudioPlayerProps) => {
               <span
                 key={index}
                 className={`${css.bar} ${isPlayed ? css.barPlayed : ""}`}
-                style={{ width: BAR_WIDTH, height: barHeight(index) }}
+                style={{
+                  width: BAR_WIDTH,
+                  height: barHeight(levels[index] ?? 0),
+                  transitionDelay: `${Math.min(index * MORPH_STAGGER, MORPH_STAGGER_CAP)}ms`,
+                }}
               />
             );
           })}

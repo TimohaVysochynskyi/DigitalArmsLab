@@ -1,17 +1,26 @@
-import { useArsenal } from "@/features/arsenal";
+import type { ArsenalData } from "@/features/arsenal";
 import Loader from "@/shared/Loader";
 
 import CategoryList from "./CategoryList";
 import CategoryDropdown from "./CategoryDropdown";
 import WeaponSlider from "./WeaponSlider";
-import { useArsenalSlider } from "./useArsenalSlider";
+import type { ArsenalSlider } from "./useArsenalSlider";
 
 import css from "./ArsenalSection.module.css";
 
-const ArsenalSection = () => {
-  const { data, isLoading, error } = useArsenal();
-  const slider = useArsenalSlider(data);
+type ArsenalSectionProps = {
+  data: ArsenalData | null;
+  isLoading: boolean;
+  error: string | null;
+  slider: ArsenalSlider;
+};
 
+const ArsenalSection = ({
+  data,
+  isLoading,
+  error,
+  slider,
+}: ArsenalSectionProps) => {
   return (
     <>
       <div className={css.container}>

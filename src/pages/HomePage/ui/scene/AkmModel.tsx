@@ -389,8 +389,10 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
        горизонталі та yaw навколо ЕКРАННОЇ вертикалі). Завдяки цьому на мобільному, де модель
        повернута roll'ом, перетягування лишається природним — а не «як на десктопі, але
        повернуте на кут». Ручний доворот діє лише в CTA (масштаб flow: у Features — нуль). */
-    const manualYaw = choreo.akmManualYaw * flow;
-    const manualPitch = choreo.akmManualPitch * flow;
+    // Ручний доворот діє лише в CTA і лише НЕ на телефоні (≤600 він заважав скролу — вимкнено).
+    const manualScale = ctaVertical ? 0 : flow;
+    const manualYaw = choreo.akmManualYaw * manualScale;
+    const manualPitch = choreo.akmManualPitch * manualScale;
     group.rotation.set(manualPitch, manualYaw, screenRoll, "YXZ");
 
     // Внутрішня група — «режисерська» поза (доворот оглядового столу + мікрорух), БЕЗ ручного.

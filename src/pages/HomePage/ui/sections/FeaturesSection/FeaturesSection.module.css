@@ -163,7 +163,7 @@
 @media screen and (max-width: 768px) {
   /* Менше вертикального падінгу — вертикальній зброї більше висоти. */
   .sticky {
-    padding: 40px;
+    padding: 80px 40px 24px 40px;
   }
   /* DOM-порядок [слот, картка] + column-reverse → картка ЗВЕРХУ, слот під нею; flex-start
      притискає картку до верху, а моделі (ВЕРТИКАЛЬНА зброя) лишає весь простір нижче. */
@@ -197,6 +197,6 @@
 
 @media screen and (max-width: 600px) {
   .sticky {
-    padding: 40px 24px;
+    padding: 80px 24px 24px 24px;
   }
 }

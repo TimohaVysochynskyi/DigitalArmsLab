@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { useWeaponDetail } from "@/features/arsenal";
 import Loader from "@/shared/Loader";
 import { hideAppLoader } from "@/shared/lib/appLoader";
+import { WEAPON_STATE_KEY } from "@/shared/lib";
 
 import WeaponViewer from "./WeaponViewer";
 import SceneToolbar from "./SceneToolbar";
@@ -27,7 +28,13 @@ const ScenePage = () => {
     <div className={css.page}>
       <div className={css.bgEffect} />
       <div className={css.container}>
-        <Link to="/lab" className={css.backLink}>
+        {/* Несемо назад id одиниці — Лабораторія відкриє слайдер саме на ній (працює й тоді,
+            коли на сцену зайшли за прямим посиланням, без візиту в Лабораторію). */}
+        <Link
+          to="/lab"
+          state={{ [WEAPON_STATE_KEY]: weaponId }}
+          className={css.backLink}
+        >
           <svg
             className={css.backIcon}
             viewBox="0 0 14 14"

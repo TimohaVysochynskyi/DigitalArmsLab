@@ -51,13 +51,30 @@
   outline-offset: 4px;
 }
 
+/* transition height — саме він перетікає хвилю в нову форму при зміні зброї.
+   transition-delay приходить інлайном і дає пробіг зліва направо. */
 .bar {
   flex-shrink: 0;
   background-color: var(--secondary-color);
-  transition: background-color 0.15s;
+  transition:
+    height 0.35s ease,
+    background-color 0.15s;
 }
 .barPlayed {
   background-color: var(--accent-bright-color);
+}
+
+.playerDisabled .button {
+  cursor: not-allowed;
+}
+.playerDisabled .icon {
+  fill: var(--secondary-dark-color);
+}
+.playerDisabled .wave {
+  cursor: default;
+}
+.playerDisabled .bar {
+  background-color: var(--secondary-dark-color);
 }
 
 @media screen and (max-width: 600px) {

@@ -14,6 +14,8 @@ export type Weapon = {
   image: string;
   /** Шлях до .glb у /public/models. */
   modelUrl: string;
+  /** Озвучка голосового гіда. Немає — плеєр показується неактивним. */
+  audioUrl?: string;
 };
 
 export type WeaponSpec = {

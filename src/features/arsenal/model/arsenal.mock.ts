@@ -11,8 +11,16 @@ import m67 from "@/assets/images/weapons/m67.webp";
 import fpv from "@/assets/images/weapons/fpv.webp";
 import mavic from "@/assets/images/weapons/mavic.webp";
 
-const AKM_MODEL = "/models/akm.ktx2.glb";
-const DRONE_MODEL = "/models/drone.ktx2.glb";
+import akmAudio from "@/assets/audio/akm.mp3";
+import ar15Audio from "@/assets/audio/ar15.mp3";
+import makarovAudio from "@/assets/audio/makarov.mp3";
+import berettaAudio from "@/assets/audio/beretta-92.mp3";
+import f1Audio from "@/assets/audio/f-1.mp3";
+import m67Audio from "@/assets/audio/m67.mp3";
+
+/* ScenePage-збірки (стеля текстур 2048). HomePage бере свої 1024-версії напряму
+   в AkmModel/DroneModel — вони тут не фігурують. */
+const sceneModel = (id: string) => `/models/${id}-2048.ktx2.glb`;
 
 export const ARSENAL_MOCK_DATA: ArsenalData = {
   categories: [
@@ -29,7 +37,8 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "СРСР",
       year: 1954,
       image: akmImage,
-      modelUrl: AKM_MODEL,
+      audioUrl: akmAudio,
+      modelUrl: sceneModel("akm"),
     },
     {
       id: "ar15",
@@ -38,7 +47,8 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "США",
       year: 1958,
       image: ar15,
-      modelUrl: AKM_MODEL,
+      audioUrl: ar15Audio,
+      modelUrl: sceneModel("ar15"),
     },
     {
       id: "makarov",
@@ -47,7 +57,8 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "СРСР",
       year: 1949,
       image: makarov,
-      modelUrl: AKM_MODEL,
+      audioUrl: makarovAudio,
+      modelUrl: sceneModel("makarov"),
     },
     {
       id: "beretta-92",
@@ -56,16 +67,18 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "Італія",
       year: 1975,
       image: beretta,
-      modelUrl: AKM_MODEL,
+      audioUrl: berettaAudio,
+      modelUrl: sceneModel("beretta-92"),
     },
     {
-      id: "f-1",
+      id: "f1",
       categoryId: "grenades",
       name: "Ф-1",
       country: "СРСР",
       year: 1939,
       image: f1,
-      modelUrl: AKM_MODEL,
+      audioUrl: f1Audio,
+      modelUrl: sceneModel("f1"),
     },
     {
       id: "m67",
@@ -74,7 +87,8 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "США",
       year: 1968,
       image: m67,
-      modelUrl: AKM_MODEL,
+      audioUrl: m67Audio,
+      modelUrl: sceneModel("m67"),
     },
     {
       id: "fpv",
@@ -83,7 +97,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "Україна",
       year: 2022,
       image: fpv,
-      modelUrl: DRONE_MODEL,
+      modelUrl: sceneModel("fpv"),
     },
     {
       id: "mavic",
@@ -92,7 +106,7 @@ export const ARSENAL_MOCK_DATA: ArsenalData = {
       country: "Китай",
       year: 2021,
       image: mavic,
-      modelUrl: DRONE_MODEL,
+      modelUrl: sceneModel("mavic"),
     },
   ],
 };

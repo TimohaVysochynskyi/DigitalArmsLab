@@ -26,7 +26,8 @@
 .imageWrapper {
   position: absolute;
   right: 0;
-  bottom: 4%;
+  /* Опущено нижче, щоб модель (поворотний стіл) не налазила на картку вгорі зліва. */
+  bottom: -8%;
   width: 100%;
   display: flex;
   justify-content: flex-end;
@@ -131,7 +132,7 @@
 
 @media screen and (max-width: 1024px) {
   .card {
-    width: 350px;
+    width: 100%;
   }
   .cardBody {
     padding: 16px;
@@ -149,44 +150,53 @@
   .cardText {
     font-size: 16px;
   }
-  /* Слот масштабується висотою (height:100%), але обмежений і по ширині (max-width),
-     щоб на вузьких-високих екранах не роздувався й не давав горизонтального скролу. */
+  /* На компактних екранах (і портрет, і ландшафт) центруємо слот по вертикалі з невеликим
+     зсувом униз — інакше на портретних планшетах модель прибивало до низу з великою пусткою. */
   .imageWrapper {
     padding: 0;
-  }
-  .akmSlot {
-    max-width: 24vw;
+    top: 15%;
+    bottom: 0;
+    align-items: center;
   }
 }
 
 @media screen and (max-width: 768px) {
+  /* Менше вертикального падінгу — вертикальній зброї більше висоти. */
   .sticky {
-    padding: 80px 40px;
+    padding: 40px;
+  }
+  /* DOM-порядок [слот, картка] + column-reverse → картка ЗВЕРХУ, слот під нею; flex-start
+     притискає картку до верху, а моделі (ВЕРТИКАЛЬНА зброя) лишає весь простір нижче. */
+  .section {
+    flex-direction: column-reverse;
+    justify-content: flex-start;
+    gap: 20px;
+  }
+  .card {
+    position: relative;
+    left: auto;
+    top: auto;
+  }
+  .imageWrapper {
+    position: relative;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .akmSlot {
+    width: 100%;
+    height: 100%;
+    max-width: none;
   }
 }
 
 @media screen and (max-width: 600px) {
   .sticky {
-    padding: 80px 24px;
-  }
-  .section {
-    flex-direction: column-reverse;
-    justify-content: center;
-    gap: 72px;
-  }
-  .imageWrapper {
-    width: 100%;
-    height: 320px;
-    display: flex;
-    justify-content: center;
-  }
-  .akmSlot {
-    height: 100%;
-    width: auto;
-    max-width: none;
-  }
-  .card {
-    width: 100%;
-    position: relative;
+    padding: 40px 24px;
   }
 }

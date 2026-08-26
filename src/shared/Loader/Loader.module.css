@@ -1,0 +1,29 @@
+.loader {
+  --b: 8%;
+  height: 80px;
+  aspect-ratio: 1 / cos(30deg);
+  position: relative;
+  clip-path: polygon(
+    50% 0,
+    100% 100%,
+    0 100%,
+    50% 0,
+    50% var(--b),
+    calc(var(--b) * cos(30deg)) calc(100% - var(--b) / 2),
+    calc(100% - var(--b) * cos(30deg)) calc(100% - var(--b) / 2),
+    50% var(--b)
+  );
+  filter: blur(12px);
+}
+.loader:before {
+  content: "";
+  position: absolute;
+  inset: -8% 0;
+  background: conic-gradient(#0000 5%, var(--white-color), #0000 50%);
+  animation: l5 2s linear infinite;
+}
+@keyframes l5 {
+  to {
+    rotate: 1turn;
+  }
+}

@@ -69,6 +69,10 @@ const TUNE = {
   aboutSizeMul: 0.7,
   hover: { amplitude: 0.06, speed: 1.1 },
 
+  /** Інерція «допливання»: дрон доганяє ціль скролу плавно, а не прибитий до неї
+     покадрово (менше = повільніше й «важче»). Дає преміальний плавний рух. */
+  glide: 3,
+
   /* Легке стеження за курсором у Hero: дрон ЛЕДЬ довертається, наче камера веде за
      вказівником. Свідомо не прямий трекінг — лише невеликий доворот від базової пози,
      інакше читається як дешевий «парallax-віджет», а не як важкий апарат у повітрі.
@@ -103,6 +107,15 @@ const DroneModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
   const aim = usePointerAim();
   // Згладжений курсор — окремо від «сирого», щоб дрон наздоганяв його з інерцією.
   const aimed = useRef({ x: 0, y: 0 });
+  /* Згладжений стан хореографії — доганяє ціль скролу з інерцією («допливання»). */
+  const smooth = useRef<{
+    x: number;
+    y: number;
+    scale: number;
+    yaw: number;
+    pitch: number;
+    roll: number;
+  } | null>(null);
 
   /* Центр моделі + профілі силуету обох Hero-поз. Рахується ОДНИМ проходом по геометрії
      (див. modelSilhouettes): окремі проходи на кожну позу коштували секундного фризу
@@ -230,24 +243,38 @@ const DroneModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
       scale = lerp(heroScale, aboutScale, p);
     }
 
-    /* Стеження за курсором — лише в Hero (згасає, щойно дрон вирушає до About): далі
-       в нього своя хореографія, і дві сили за один оберт читалися б як брак контролю.
-       Крен протилежний до повороту — так апарат «закладає віраж», а не просто крутиться. */
+    /* Плавне «допливання»: рендеримо не сиру ціль скролу, а згладжений стан, що доганяє її
+       з інерцією (кадронезалежно). Дає преміальний рух, не прибитий до позиції скролу.
+       Перший кадр — снап без глайду (щоб не «прилітав» з нуля). */
+    if (!smooth.current) {
+      smooth.current = { x: screenX, y: screenY, scale, yaw, pitch, roll };
+    }
+    const s = smooth.current;
+    s.x = damp(s.x, screenX, TUNE.glide, delta);
+    s.y = damp(s.y, screenY, TUNE.glide, delta);
+    s.scale = damp(s.scale, scale, TUNE.glide, delta);
+    s.yaw = damp(s.yaw, yaw, TUNE.glide, delta);
+    s.pitch = damp(s.pitch, pitch, TUNE.glide, delta);
+    s.roll = damp(s.roll, roll, TUNE.glide, delta);
+
+    /* Стеження за курсором — на ЗГЛАДЖЕНУ позу, лише в Hero (згасає при вильоті). Крен
+       протилежний до повороту — так апарат «закладає віраж», а не просто крутиться. */
     const aimInfluence = 1 - p;
-    yaw += aimed.current.x * TUNE.pointerAim.yaw * aimInfluence;
-    pitch += aimed.current.y * TUNE.pointerAim.pitch * aimInfluence;
-    roll -= aimed.current.x * TUNE.pointerAim.roll * aimInfluence;
+    const finalYaw = s.yaw + aimed.current.x * TUNE.pointerAim.yaw * aimInfluence;
+    const finalPitch =
+      s.pitch + aimed.current.y * TUNE.pointerAim.pitch * aimInfluence;
+    const finalRoll =
+      s.roll - aimed.current.x * TUNE.pointerAim.roll * aimInfluence;
 
     group.position.set(
-      (screenX - size.width / 2) * worldPerPx,
-      (size.height / 2 - screenY) * worldPerPx,
+      (s.x - size.width / 2) * worldPerPx,
+      (size.height / 2 - s.y) * worldPerPx,
       0,
     );
-    group.scale.setScalar(scale);
+    group.scale.setScalar(s.scale);
 
     // Порядок "ZXY": yaw навколо власної вертикалі → нахил до камери → оберт у площині екрана.
-    // При roll = 0 це тотожно попередній поведінці (Rx·Ry), тож About/геп не змінились.
-    inner.rotation.set(pitch, yaw, roll, "ZXY");
+    inner.rotation.set(finalPitch, finalYaw, finalRoll, "ZXY");
     inner.position.y =
       Math.sin(state.clock.elapsedTime * TUNE.hover.speed) *
       TUNE.hover.amplitude;

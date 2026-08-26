@@ -6,14 +6,68 @@
   <link rel="shortcut icon" href="/favicon.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DigitalArmsLab</title>
+  <meta name="description"
+    content="DigitalArmsLab — освітня платформа для вивчення будови та принципу роботи зброї: інтерактивні 3D-моделі й анімації збірки та розбирання." />
+  <meta property="og:title" content="DigitalArmsLab" />
+  <meta property="og:description"
+    content="Освітня платформа для вивчення будови та принципу роботи зброї: інтерактивні 3D-моделі й анімації збірки та розбирання." />
+  <meta property="og:type" content="website" />
 
-  <!-- Цим шрифтом набрано заголовок Hero — найбільший елемент першого екрана, тобто саме
-       він визначає LCP. Без preload браузер дізнається про нього лише після завантаження
-       й розбору CSS, і показ заголовка відкладається на секунди. -->
   <link rel="preload" href="/fonts/NotoSansMono-Black.woff2" as="font" type="font/woff2" crossorigin />
 </head>
 
 <body>
+  <div id="app-loader" aria-hidden="true">
+    <div class="app-loader__spinner"></div>
+  </div>
+  <style>
+    #app-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #141414;
+      transition: opacity 0.45s ease;
+    }
+
+    #app-loader.app-loader--hidden {
+      opacity: 0;
+    }
+
+    .app-loader__spinner {
+      --b: 8%;
+      height: 80px;
+      aspect-ratio: 1 / cos(30deg);
+      position: relative;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%, 50% 0, 50% var(--b),
+          calc(var(--b) * cos(30deg)) calc(100% - var(--b) / 2),
+          calc(100% - var(--b) * cos(30deg)) calc(100% - var(--b) / 2), 50% var(--b));
+      filter: blur(12px);
+    }
+
+    .app-loader__spinner::before {
+      content: "";
+      position: absolute;
+      inset: -8% 0;
+      background: conic-gradient(#0000 5%, #dbdbdb, #0000 50%);
+      animation: appLoaderSpin 2s linear infinite;
+    }
+
+    @keyframes appLoaderSpin {
+      to {
+        rotate: 1turn;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .app-loader__spinner::before {
+        animation: none;
+      }
+    }
+  </style>
+
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

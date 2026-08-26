@@ -3,10 +3,11 @@ import { useLocation } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import { getLayoutConfig } from "./layout.config";
-import { useAnchorScroll } from "@/shared/lib";
+import { useAnchorScroll, useScrollToTop } from "@/shared/lib";
 import css from "./Layout.module.css";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
+  useScrollToTop();
   useAnchorScroll();
 
   const { pathname } = useLocation();

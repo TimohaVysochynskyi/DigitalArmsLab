@@ -6,9 +6,9 @@
    лишає модель у кінцевій позі. */
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { useAnimations, useGLTF } from "@react-three/drei";
+import { useAnimations } from "@react-three/drei";
 import { Box3, Group, LoopOnce, Sphere, Vector3 } from "three";
-import { tuneMaterials } from "@/shared/Scene3D";
+import { useGltfModel, useTunedMaterials } from "@/shared/Scene3D";
 import {
   ASSEMBLY_CLIPS,
   DEFAULT_ORBIT,
@@ -20,6 +20,10 @@ import {
   projectVertices,
   type ModelProjection,
 } from "./viewer.math";
+
+/* Матеріали стриманіші за лендінгові: тут модель роздивляються зблизька, тож рельєф і
+   відбиття гасимо лише настільки, щоб прибрати мерехтіння блиску, не з'їдаючи деталь. */
+const MATERIALS = { envMapIntensity: 0.5, normalScale: 0.9, roughnessBoost: 1.1 };
 
 const NO_FACING: [number, number, number] = [0, 0, 0];
 const FADE = 0.2;
@@ -42,7 +46,7 @@ const WeaponModel = ({
   onMeasure,
 }: WeaponModelProps) => {
   const root = useRef<Group>(null);
-  const { scene, animations } = useGLTF(url);
+  const { scene, animations } = useGltfModel(url);
   const { actions } = useAnimations(animations, root);
   const isFirstPose = useRef(true);
 
@@ -66,9 +70,7 @@ const WeaponModel = ({
     };
   }, [animations]);
 
-  useEffect(() => {
-    tuneMaterials(scene);
-  }, [scene]);
+  useTunedMaterials(scene, MATERIALS);
 
   useEffect(() => {
     onAssemblyAvailable(Boolean(clips.disassemble));

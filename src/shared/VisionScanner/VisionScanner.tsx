@@ -74,6 +74,11 @@ const DEFAULT_CONFIG: ScannerConfig = {
 const DETECTION_CLASSES = ["OBJECT", "FEATURE", "NODE", "SIGNAL", "PATTERN"];
 const SCAN_INTERVAL_MS = 60;
 const MIN_SPAWN_DISTANCE = 30;
+// Після зупинки курсора ефект живе ще стільки, а потім плавно згасає й приспиняється,
+// щоб не відволікати під час читання. Прокидається на будь-який рух курсора.
+const IDLE_HOLD_MS = 1200;
+// Швидкість появи/згасання (наздоганянь за секунду): більше = різкіше.
+const FADE_RATE = 5;
 
 type Rgb = { r: number; g: number; b: number };
 
@@ -161,7 +166,8 @@ class Detection {
       .toString(16)
       .toUpperCase()
       .padStart(6, "0");
-    this.klass = DETECTION_CLASSES[Math.floor(Math.random() * DETECTION_CLASSES.length)];
+    this.klass =
+      DETECTION_CLASSES[Math.floor(Math.random() * DETECTION_CLASSES.length)];
   }
 
   update(dt: number, persistence: number) {
@@ -258,7 +264,11 @@ const drawCursor = (
   if (cfg.complexity > 0.4) {
     ctx.fillStyle = color;
     ctx.font = "9px monospace";
-    ctx.fillText(`SCAN_RAD: ${cfg.radius}px`, mouse.x + 5, mouse.y - cfg.radius - 5);
+    ctx.fillText(
+      `SCAN_RAD: ${cfg.radius}px`,
+      mouse.x + 5,
+      mouse.y - cfg.radius - 5,
+    );
     ctx.fillText(
       `X:${Math.round(mouse.x)} Y:${Math.round(mouse.y)}`,
       mouse.x + 5,
@@ -363,6 +373,10 @@ const VisionScanner = ({
     let lastFrame = performance.now();
     let rafId = 0;
     let running = false;
+    let inView = false;
+    // Час останнього РУХУ курсора (не скролу) + згладжена прозорість шару.
+    let lastMoveAt = performance.now();
+    let displayOpacity = 1;
 
     const updateOffscreen = () => {
       const img = imageRef.current;
@@ -389,7 +403,10 @@ const VisionScanner = ({
       mouse.y = cy - crect.top;
       const prect = parent.getBoundingClientRect();
       mouse.active =
-        cx >= prect.left && cx < prect.right && cy >= prect.top && cy < prect.bottom;
+        cx >= prect.left &&
+        cx < prect.right &&
+        cy >= prect.top &&
+        cy < prect.bottom;
     };
 
     const resize = () => {
@@ -397,7 +414,10 @@ const VisionScanner = ({
       const rect = parent.getBoundingClientRect();
       const sectionW = Math.max(1, Math.floor(rect.width));
       const sectionH = Math.max(1, Math.floor(rect.height));
-      const margin = Math.max(0, Math.round(cfg.overflow == null ? cfg.radius : cfg.overflow));
+      const margin = Math.max(
+        0,
+        Math.round(cfg.overflow == null ? cfg.radius : cfg.overflow),
+      );
 
       // Розширюємо лише по вертикалі (згори/знизу); по X — рівно ширина секції,
       // інакше canvas виходить за body і зʼявляється горизонтальний скрол.
@@ -409,7 +429,10 @@ const VisionScanner = ({
       canvas.style.width = `${canvasW}px`;
       canvas.style.height = `${canvasH}px`;
 
-      const dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 1.5 : 2);
+      const dpr = Math.min(
+        window.devicePixelRatio || 1,
+        window.innerWidth <= 768 ? 1.5 : 2,
+      );
       canvas.width = Math.round(canvasW * dpr);
       canvas.height = Math.round(canvasH * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -426,6 +449,9 @@ const VisionScanner = ({
       lastClientY = point.clientY;
       hasPointer = true;
       applyClient(lastClientX, lastClientY);
+      // Рух курсора «будить» ефект (плавна поява + перезапуск циклу, якщо приспав).
+      lastMoveAt = performance.now();
+      if (inView && !running) start();
     };
     const onPointerLeave = () => {
       mouse.active = false;
@@ -455,8 +481,14 @@ const VisionScanner = ({
       const scale = offscreen.width / canvasW;
       const rx = Math.max(0, Math.floor((mouse.x - cfg.radius) * scale));
       const ry = Math.max(0, Math.floor((mouse.y - cfg.radius) * scale));
-      const rw = Math.min(offscreen.width - rx, Math.floor(cfg.radius * 2 * scale));
-      const rh = Math.min(offscreen.height - ry, Math.floor(cfg.radius * 2 * scale));
+      const rw = Math.min(
+        offscreen.width - rx,
+        Math.floor(cfg.radius * 2 * scale),
+      );
+      const rh = Math.min(
+        offscreen.height - ry,
+        Math.floor(cfg.radius * 2 * scale),
+      );
       if (rw <= 5 || rh <= 5) return;
 
       let data: Uint8ClampedArray;
@@ -502,12 +534,21 @@ const VisionScanner = ({
       const dt = (ts - lastFrame) / 1000;
       lastFrame = ts;
 
+      // Курсор нещодавно рухався? → ефект «активний»; інакше — плавно згасаємо.
+      const sinceMove = ts - lastMoveAt;
+      const target = sinceMove < IDLE_HOLD_MS ? 1 : 0;
+      displayOpacity +=
+        (target - displayOpacity) * (1 - Math.exp(-FADE_RATE * dt));
+      if (displayOpacity < 0.001) displayOpacity = 0;
+      canvas.style.opacity = String(displayOpacity);
+
       ctx.clearRect(0, 0, canvasW, canvasH);
 
       const img = imageRef.current;
       if (img.el && img.loaded) drawImageCover(ctx, img.el, canvasW, canvasH);
 
-      scan(cfg);
+      // Нові детекції спавняться ЛИШЕ поки курсор нещодавно рухався; далі наявні згасають.
+      if (target === 1) scan(cfg);
 
       for (let i = detections.length - 1; i >= 0; i--) {
         if (detections[i].update(dt, cfg.persistence)) {
@@ -517,13 +558,19 @@ const VisionScanner = ({
         }
       }
 
-      if (mouse.active) drawCursor(ctx, cfg, mouse, canvasH);
+      if (mouse.active && target === 1) drawCursor(ctx, cfg, mouse, canvasH);
+
+      // Повністю згасли й нічого не лишилось — приспиняємо цикл (прокинеться на рух курсора).
+      if (displayOpacity === 0 && detections.length === 0) {
+        stop();
+        return;
+      }
 
       rafId = requestAnimationFrame(render);
     };
 
     const start = () => {
-      if (running || reduceMotion) return;
+      if (running || reduceMotion || !inView) return;
       running = true;
       lastFrame = performance.now();
       rafId = requestAnimationFrame(render);
@@ -542,8 +589,13 @@ const VisionScanner = ({
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) start();
-          else stop();
+          if (entry.isIntersecting) {
+            inView = true;
+            start();
+          } else {
+            inView = false;
+            stop();
+          }
         }
       },
       { threshold: 0 },
@@ -553,7 +605,10 @@ const VisionScanner = ({
     window.addEventListener("mousemove", onPointerMove, { passive: true });
     window.addEventListener("touchmove", onPointerMove, { passive: true });
     window.addEventListener("touchend", onPointerLeave, { passive: true });
-    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    window.addEventListener("scroll", onScroll, {
+      passive: true,
+      capture: true,
+    });
 
     return () => {
       stop();

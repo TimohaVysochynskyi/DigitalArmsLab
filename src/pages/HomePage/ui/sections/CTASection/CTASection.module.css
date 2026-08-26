@@ -20,6 +20,10 @@
 .akmSlot {
   width: min(1880px, 86vw);
   aspect-ratio: 1872 / 677;
+  /* Слот — ще й зона захоплення для ручного обертання АКМ (див. CTASection.tsx):
+     grab-курсор як підказка + touch-action:none, щоб дотик крутив модель, а не скролив. */
+  cursor: grab;
+  touch-action: none;
 }
 
 /**** RESPONSIVE ****/
@@ -47,8 +51,12 @@
   .sectionWrapper {
     padding: 40px 24px;
   }
-  /* На телефоні секція стає вертикальною — даємо моделі більше місця. */
+  /* ≤600 зброя ВЕРТИКАЛЬНА (див. AkmModel) — слот стає ВИСОКИМ, щоб довжина зброї
+     заповнювала екран і модель була великою. Ширина повна, висота — під в'юпорт (з місцем
+     під кнопку). aspect-ratio знімаємо, бо тепер габарит задають width×height. */
   .akmSlot {
-    width: min(940px, 78vw);
+    width: 100%;
+    height: min(62vh, 540px);
+    aspect-ratio: auto;
   }
 }

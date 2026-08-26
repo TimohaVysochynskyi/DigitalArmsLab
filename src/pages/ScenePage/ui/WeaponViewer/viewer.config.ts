@@ -29,7 +29,7 @@ export const AUTO_ROTATE_SPEED = 1.2;
 
 /** Стартовий доворот моделі, щоб вона дивилась профілем до глядача. */
 export const MODEL_FACING: Record<string, [number, number, number]> = {
-  "/models/akm.opt.glb": [0, -Math.PI / 2, 0],
+  "/models/akm.ktx2.glb": [0, -Math.PI / 2, 0],
 };
 
 /** Можливі назви кліпів розбирання/збирання (у akm.glb — саме "diassemble"). */

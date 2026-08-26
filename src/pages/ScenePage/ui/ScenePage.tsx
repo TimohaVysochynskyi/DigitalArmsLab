@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { useWeaponDetail } from "@/features/arsenal";
 import Loader from "@/shared/Loader";
+import { hideAppLoader } from "@/shared/lib/appLoader";
 
 import WeaponViewer from "./WeaponViewer";
 import SceneToolbar from "./SceneToolbar";
@@ -15,6 +17,11 @@ const ScenePage = () => {
   const { weaponId } = useParams();
   const { data: weapon, isLoading, error } = useWeaponDetail(weaponId);
   const controls = useSceneControls(weaponId);
+
+  // Сторінка має власний Loader у в'ювері → стартовий лоадер ховаємо на монтуванні.
+  useEffect(() => {
+    hideAppLoader();
+  }, []);
 
   return (
     <div className={css.page}>

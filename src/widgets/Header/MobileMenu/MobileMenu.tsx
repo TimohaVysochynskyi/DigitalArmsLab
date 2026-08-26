@@ -149,8 +149,9 @@ const MobileMenu = ({ accentLink }: MobileMenuProps) => {
 
           <ul className={css.socialsList}>
             <li>
-              <a href="#">
+              <a href="#" aria-label="Instagram">
                 <svg
+                  aria-hidden="true"
                   className={css.socialsIcon}
                   viewBox="0 0 39 39"
                   fill="none"
@@ -165,8 +166,9 @@ const MobileMenu = ({ accentLink }: MobileMenuProps) => {
               </a>
             </li>
             <li>
-              <a href="#">
+              <a href="#" aria-label="LinkedIn">
                 <svg
+                  aria-hidden="true"
                   className={css.socialsIcon}
                   viewBox="0 0 40 40"
                   fill="none"
@@ -177,8 +179,9 @@ const MobileMenu = ({ accentLink }: MobileMenuProps) => {
               </a>
             </li>
             <li>
-              <a href="#">
+              <a href="#" aria-label="Facebook">
                 <svg
+                  aria-hidden="true"
                   className={css.socialsIcon}
                   viewBox="0 0 40 40"
                   fill="none"
@@ -189,8 +192,9 @@ const MobileMenu = ({ accentLink }: MobileMenuProps) => {
               </a>
             </li>
             <li>
-              <a href="#">
+              <a href="#" aria-label="X (Twitter)">
                 <svg
+                  aria-hidden="true"
                   className={css.socialsIcon}
                   viewBox="0 0 36 33"
                   fill="none"

@@ -11,8 +11,8 @@ import m67 from "@/assets/images/weapons/m67.webp";
 import fpv from "@/assets/images/weapons/fpv.webp";
 import mavic from "@/assets/images/weapons/mavic.webp";
 
-const AKM_MODEL = "/models/akm.opt.glb";
-const DRONE_MODEL = "/models/drone.opt.glb";
+const AKM_MODEL = "/models/akm.ktx2.glb";
+const DRONE_MODEL = "/models/drone.ktx2.glb";
 
 export const ARSENAL_MOCK_DATA: ArsenalData = {
   categories: [

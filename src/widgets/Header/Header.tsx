@@ -14,13 +14,18 @@ const Header = ({ accentLink }: HeaderProps) => {
     <>
       <header className={css.headerWrapper}>
         <div className={css.header}>
-          <Link to="/" className={css.logoWrapper}>
+          <Link
+            to="/"
+            className={css.logoWrapper}
+            aria-label="DigitalArmsLab, на головну"
+          >
             <svg
               stroke="currentColor"
               fill="currentColor"
               strokeWidth="0"
               viewBox="0 0 512 512"
               className={css.logo}
+              aria-hidden="true"
               xmlns="http://www.w3.org/2000/svg"
             >
               <path d="M256 32 20 464h472L256 32z"></path>

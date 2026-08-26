@@ -6,15 +6,13 @@ import FeaturesSection from "./sections/FeaturesSection";
 import CTASection from "./sections/CTASection";
 import ContactSection from "./sections/ContactSection/ContactSection";
 
-import { useIdle } from "@/shared/lib/useIdle";
 import ScreenGrade from "@/shared/ScreenGrade";
-import SceneLoader from "@/shared/SceneLoader";
+import { hideAppLoader } from "@/shared/lib/appLoader";
 
-/* 3D тягне за собою three.js — окремий чанк на ~290 КБ. Статичний імпорт клав його в
-   критичний шлях: заголовок Hero (а це LCP-елемент) не міг намалюватись, доки не
-   завантажиться й розбереться рушій, який тексту взагалі не потрібен. Тепер сцена
-   під'їжджає окремо, вже після того, як сторінку видно — інакше вона встигала забрати
-   смугу ще ДО того, як намалювався заголовок. */
+/* 3D тягне за собою three.js — окремий чанк (~290 КБ), тож лишається `lazy`. Але тепер його
+   монтуємо ОДРАЗУ (не чекаючи `useIdle`): стартовий лоадер (#app-loader) усе одно перекриває
+   екран, поки вантажиться сцена, тож немає сенсу відкладати 3D — навпаки, хочемо, щоб сайт
+   відкрився ВЖЕ зі сценою. Коли моделі готові, HomeScene кличе `onReady` → лоадер ховається. */
 const HomeScene = lazy(() => import("./scene/HomeScene"));
 import { createChoreo } from "./scene/types";
 
@@ -24,16 +22,16 @@ const HomePage = () => {
   // Спільний мутабельний стан для 3D (без ре-рендерів) + дискретний крок картки Features.
   const choreoRef = useRef(createChoreo());
   const [featuresStep, setFeaturesStep] = useState(0);
-  const sceneReady = useIdle();
-
 
   return (
     <>
-      {sceneReady && (
-        <Suspense fallback={null}>
-          <HomeScene choreoRef={choreoRef} onFeaturesStep={setFeaturesStep} />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <HomeScene
+          choreoRef={choreoRef}
+          onFeaturesStep={setFeaturesStep}
+          onReady={hideAppLoader}
+        />
+      </Suspense>
 
       <HeroSection />
 
@@ -44,12 +42,10 @@ const HomePage = () => {
         {/* Зона для top-down дрона між About і Features (лише ≤600; на десктопі height:0). */}
         <div id="drone-gap" className={css.droneGap} aria-hidden="true" />
         <FeaturesSection step={featuresStep} />
-        <CTASection />
+        <CTASection choreoRef={choreoRef} />
       </div>
 
       <ContactSection />
-
-      <SceneLoader />
 
       {/* Обробка кадру — останнім шаром, поверх усього. */}
       <ScreenGrade />

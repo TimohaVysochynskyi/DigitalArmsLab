@@ -16,6 +16,10 @@ export type Choreo = {
   /** 0 = бокс Features (зібраний), 1 = бокс CTA (розібраний).
       Веде одночасно переліт між слотами, доворот в оглядову позу і скраб розбирання. */
   akmFlow: number;
+  /** Ручний доворот АКМ користувачем у CTA (радіани, накопичується перетягуванням).
+      Застосовується лише в CTA (масштабується akmFlow), поверх оглядової пози. */
+  akmManualYaw: number;
+  akmManualPitch: number;
 };
 
 export const createChoreo = (): Choreo => ({
@@ -25,6 +29,8 @@ export const createChoreo = (): Choreo => ({
   akmVisible: false,
   akmSpin: 0,
   akmFlow: 0,
+  akmManualYaw: 0,
+  akmManualPitch: 0,
 });
 
 /** id порожнього DOM-боксу в Hero, у який вписується дрон (позиція + розмір задаються CSS). */

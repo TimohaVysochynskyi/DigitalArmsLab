@@ -78,8 +78,9 @@ const ContactSection = () => {
               <h3 className={css.socialsTitle}>Ми в соцмережах</h3>
               <ul className={css.socialsList}>
                 <li>
-                  <a href="#">
+                  <a href="#" aria-label="Instagram">
                     <svg
+                      aria-hidden="true"
                       className={css.socialsIcon}
                       viewBox="0 0 39 39"
                       fill="none"
@@ -94,8 +95,9 @@ const ContactSection = () => {
                   </a>
                 </li>
                 <li>
-                  <a href="#">
+                  <a href="#" aria-label="LinkedIn">
                     <svg
+                      aria-hidden="true"
                       className={css.socialsIcon}
                       viewBox="0 0 40 40"
                       fill="none"
@@ -106,8 +108,9 @@ const ContactSection = () => {
                   </a>
                 </li>
                 <li>
-                  <a href="#">
+                  <a href="#" aria-label="Facebook">
                     <svg
+                      aria-hidden="true"
                       className={css.socialsIcon}
                       viewBox="0 0 40 40"
                       fill="none"
@@ -118,8 +121,9 @@ const ContactSection = () => {
                   </a>
                 </li>
                 <li>
-                  <a href="#">
+                  <a href="#" aria-label="X (Twitter)">
                     <svg
+                      aria-hidden="true"
                       className={css.socialsIcon}
                       viewBox="0 0 36 33"
                       fill="none"
@@ -144,6 +148,7 @@ const ContactSection = () => {
                 </div>
                 <input
                   type="text"
+                  id="name"
                   name="name"
                   className={css.input}
                   placeholder="Як до вас звертатись"
@@ -157,6 +162,7 @@ const ContactSection = () => {
                   <span className={css.errorMessage}></span>
                 </div>
                 <textarea
+                  id="message"
                   name="message"
                   className={`${css.input} ${css.textarea}`}
                   placeholder="Розкажи детальніше — що саме на думці"

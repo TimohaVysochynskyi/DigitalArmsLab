@@ -8,15 +8,15 @@
      Features            — кліп `idle` (зброя зібрана й нерухома);
      Features → CTA      — кліп `diassemble`, прокручений скролом, із фрізом у кінці.
 
-   Рух у Features — це рух ГРУПИ, а не деталей: повільний доворот і підйом «оглядового
-   столу» через три презентаційні ракурси (по одному на картку), без зупинок між ними.
-   Модель тут майже на весь кадр, тому амплітуди навмисно малі: великий об'єкт, що сильно
-   крутиться, читається як нестабільний, а не як важкий.
+   Рух у Features — рух ГРУПИ, а не деталей. Три ЗУПИНКИ (по одній на картку): поки картка
+   тримається, модель стоїть на своїй позі й лише ледь «дихає» по нахилу/крену (без обертання
+   по Y). На зміні картки вона ПЛАВНО перетікає у наступну позу — доворот по Y + зміна нахилу
+   + невелике зміщення. Рух не прив'язаний до позиції скролу: модель доганяє ціль із власною
+   інерцією (`damp`), як на преміальних сайтах.
 
-   Розмір: слот у CSS — це справжній габарит моделі (вписування `contain` з поправкою на
-   перспективу, як у дрона). Для Features фіт рахується для ОПОРНОЇ пози (майже профіль —
-   найширший ракурс) і далі тримається сталим: інакше модель «дихала» б розміром під час
-   доворотів. Для CTA фіт рахується по РОЗІБРАНОМУ силуету, щоб деталі не вилізли за бокс. */
+   Розмір: слот у CSS — справжній габарит моделі. Фіт рахується для ОПОРНОЇ пози (чистий
+   профіль — найширший силует) і тримається СТАЛИМ: за будь-якого доворотa модель не вилазить
+   за слот і не «дихає» розміром. Для CTA фіт — по РОЗІБРАНОМУ силуету. */
 
 import { useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
@@ -37,6 +37,7 @@ import { AKM_SLOT_ID } from "./types";
 import type { Silhouette } from "./math";
 import {
   clamp01,
+  damp,
   fitToBox,
   lerp,
   modelBounds,
@@ -54,64 +55,89 @@ const FACING: [number, number, number] = [0, -Math.PI / 2, 0];
 /* Матеріали: делікатне відбиття оточення + послаблений рельєф і піднята шорсткість.
    Останні два прибирають мерехтіння блиску на дрібному рельєфі; дерево від цього ще й
    виглядає матовішим і природнішим, без глянцевих «бардових» відблисків. */
-const MATERIALS = { envMapIntensity: 0.5, normalScale: 0.8, roughnessBoost: 1.15 };
+const MATERIALS = {
+  envMapIntensity: 0.5,
+  normalScale: 0.8,
+  roughnessBoost: 1.15,
+};
 
 // Точні назви кліпів усередині akm.glb (саме `diassemble`, з помилкою — так у моделі).
 const CLIP = { idle: "idle", disassemble: "diassemble" } as const;
 
-/* Пози. Кути в порядку Euler "ZXY" — ті самі три незалежні ручки, що й у дрона:
+// Поріг мобільної версії АКМ (збігається з колонковою версткою Features ≤768).
+const MOBILE_MAX_WIDTH = 768;
+// Нижче цієї ширини CTA теж лишається ВЕРТИКАЛЬНОЮ (без «лягання» в горизонталь) — так
+// розібрану зброю на вузькому екрані видно більшою й краще.
+const CTA_VERTICAL_MAX_WIDTH = 600;
+// Екранний поворот на мобільному: зброя стає ВЕРТИКАЛЬНОЮ й заповнює висоту вузького екрана.
+const MOBILE_ROLL = Math.PI / -3;
+
+/* Кути пози в порядку Euler "ZXY":
      yaw   — оберт навколо ВЛАСНОЇ вертикалі (яким боком зброя до нас);
      pitch — нахил до/від камери: + показує зброю зверху;
-     roll  — оберт силуету в площині екрана.
-   lift — підйом у частках висоти слота. */
-type Pose = { yaw: number; pitch: number; roll: number; lift: number };
+     roll  — оберт силуету в площині екрана. */
+type Angles = { yaw: number; pitch: number; roll: number };
+
+/** Зупинка (по одній на картку): ракурс + зміщення центру у частках в'юпорту. */
+type StepPose = Angles & { offX: number; offY: number };
+
+/* Опорна поза для ВПИСУВАННЯ: чистий профіль (yaw 0) — найширший силует. Масштаб рахуємо
+   під нього й далі тримаємо СТАЛИМ, тож за будь-якого доворотa модель не вилазить за слот. */
+const PROFILE_POSE: Angles = { yaw: 0, pitch: 0, roll: 0 };
 
 const TUNE = {
-  /* Три презентаційні ракурси Features — по одному на картку; між ними інтерполяція,
-     тож оберт безперервний, а не східчастий. Кути малі свідомо: зброя займає майже весь
-     кадр, і великий доворот з'їдав би її довжину перспективою.
-       01 «Інтерактивні 3D-моделі» — майже чистий профіль: найвпізнаваніший силует;
-       02 «Анімація збірки/розбірки» — доворот і погляд зверху, наче зброя лягла на стіл;
-       03 «Теоретичний матеріал» — глибше 3/4 з невеликим креном: вигляд «на вивчення». */
-  featuresPoses: [
-    { yaw: -3 * DEG, pitch: 3 * DEG, roll: -1 * DEG, lift: -0.03 },
-    { yaw: -16 * DEG, pitch: 14 * DEG, roll: -3 * DEG, lift: 0.01 },
-    { yaw: -30 * DEG, pitch: 9 * DEG, roll: -6 * DEG, lift: 0.05 },
-  ] as Pose[],
+  /* Три ЗУПИНКИ — по одній на картку. Поки картка тримається, модель стоїть на своїй позі і
+     лише ледь «дихає» по нахилу/крену (БЕЗ обертання по Y). На переході до наступної картки
+     плавно ПЕРЕТІКАЄ у наступну позу: помітний доворот по Y + зміна нахилу + невелике
+     зміщення. Рух НЕ прив'язаний жорстко до скролу — модель доганяє ціль із власною
+     інерцією (`damp`), як на преміальних сайтах.
+       yaw — АБСОЛЮТНИЙ (не по колу): різниця між зупинками = величина й напрям доворотa;
+       offX/offY — зміщення центру у частках в'юпорту. */
+  steps: [
+    { yaw: -135 * DEG, pitch: 5 * DEG, roll: -3 * DEG, offX: 0.13, offY: 0.0 },
+    { yaw: 35 * DEG, pitch: 10 * DEG, roll: 5 * DEG, offX: 0.05, offY: 0.1 },
+    { yaw: 205 * DEG, pitch: -2 * DEG, roll: -7 * DEG, offX: 0.06, offY: 0.03 },
+  ] as StepPose[],
 
-  /* Фінальна поза в CTA — оглядова: доворот у 3/4 з поглядом трохи зверху, щоб розібрані
-     деталі читались окремо одна від одної. */
-  ctaPose: { yaw: -20 * DEG, pitch: 18 * DEG, roll: 0, lift: 0 } as Pose,
+  /* Компактні екрани (≤1024): ті самі ракурси, але БЕЗ бокових/вертикальних зсувів — модель
+     стоїть по центру слота (картка вгорі/зліва, зброя під/за нею). Художні зсуви десктопа на
+     вузьких екранах виштовхували б її вбік. */
+  compactSteps: [
+    { yaw: -135 * DEG, pitch: 5 * DEG, roll: -3 * DEG, offX: 0, offY: 0 },
+    { yaw: 35 * DEG, pitch: 10 * DEG, roll: 5 * DEG, offX: 0, offY: 0 },
+    { yaw: 205 * DEG, pitch: -2 * DEG, roll: -7 * DEG, offX: 0, offY: 0 },
+  ] as StepPose[],
 
-  /** Ледь помітне «дихання», щоб модель не виглядала замерзлою, коли скрол зупинився. */
-  breathing: { amplitude: 0.4 * DEG, speed: 0.5 },
+  /* Оглядова поза в CTA — «на столі»: затвором до юзера + невеликий кут по двох осях (нахил
+     згори + легкий крен), щоб розібрані деталі читались як розкладені на столі. Позицію
+     зводимо в ЦЕНТР екрана (див. useFrame). */
+  cta: {
+    yaw: 185 * DEG,
+    pitch: -18 * DEG,
+    roll: -6 * DEG,
+    offX: 0,
+    offY: 0,
+  } as StepPose,
+
+  /** Множник розміру моделі в CTA — щоб розібрана зброя добре вписалась «на столі». */
+  ctaSizeMul: 0.85,
+
+  /** Інерція перетікання між позами (наздоганянь за секунду): менше = повільніше/тягучіше. */
+  glide: 2.4,
+
+  /** «Живий» мікрорух під час зупинки — лише по нахилу/крену/висоті, без Y. */
+  idle: { pitch: 1.4 * DEG, roll: 1.0 * DEG, float: 0.006, speed: 0.55 },
 };
 
-const toEuler = ({ yaw, pitch, roll }: Pose) =>
+const toEuler = ({ yaw, pitch, roll }: Angles) =>
   new Euler(pitch, yaw, roll, "ZXY");
-
-const lerpPose = (from: Pose, to: Pose, t: number): Pose => ({
-  yaw: lerp(from.yaw, to.yaw, t),
-  pitch: lerp(from.pitch, to.pitch, t),
-  roll: lerp(from.roll, to.roll, t),
-  lift: lerp(from.lift, to.lift, t),
-});
-
-/** Поза на прогресі піна Features: рухаємось по ланцюжку ракурсів із м'яким переходом. */
-const featuresPoseAt = (spin: number): Pose => {
-  const poses = TUNE.featuresPoses;
-  const segments = poses.length - 1;
-  const scaled = clamp01(spin) * segments;
-  const index = Math.min(segments - 1, Math.floor(scaled));
-
-  return lerpPose(poses[index], poses[index + 1], smoothstep(scaled - index));
-};
 
 const slotRect = (slot: AkmSlotKey) =>
   document.getElementById(AKM_SLOT_ID[slot])?.getBoundingClientRect() ?? null;
 
 const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
   const root = useRef<Group>(null);
+  const pose = useRef<Group>(null);
   const model = useRef<Group>(null);
   const { scene, animations } = useGltfModel(MODEL_URL);
   const { actions, mixer } = useAnimations(animations, model);
@@ -146,18 +172,20 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
     [actions, mixer],
   );
 
-  /** Профіль силуету в поточному стані вузлів. Поза = FACING моделі + заданий ракурс. */
+  /* Профіль силуету в поточному стані вузлів. Поза = FACING + заданий ракурс, а `screenRoll`
+     (оберт навколо осі погляду, ЗОВНІШНІЙ) дає ВЕРТИКАЛЬНИЙ силует для мобільної версії. */
   const snapshot = useMemo(
-    () => (pose: Pose) => {
-      const facing = new Euler(...FACING);
-      const full = new Euler().setFromQuaternion(
-        new Quaternion()
-          .setFromEuler(toEuler(pose))
-          .multiply(new Quaternion().setFromEuler(facing)),
-      );
+    () =>
+      (pose: Angles, screenRoll = 0) => {
+        const full = new Euler().setFromQuaternion(
+          new Quaternion()
+            .setFromEuler(new Euler(0, 0, screenRoll))
+            .multiply(new Quaternion().setFromEuler(toEuler(pose)))
+            .multiply(new Quaternion().setFromEuler(new Euler(...FACING))),
+        );
 
-      return modelSilhouettes(scene, bounds.pivot, bounds.radius, [full])[0];
-    },
+        return modelSilhouettes(scene, bounds.pivot, bounds.radius, [full])[0];
+      },
     [scene, bounds],
   );
 
@@ -170,8 +198,22 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
      монтування не збігається з тим, що реально малюється. Знімок, зроблений у кадрі
      одразу після playClip, гарантовано описує саме те, що видно: інакше вписування
      рахувалось по геометрії, якої в кадрі немає, і зменшувало модель. */
-  const silhouettes = useRef<{ features?: Silhouette; cta?: Silhouette }>({});
+  const silhouettes = useRef<{
+    features?: Silhouette;
+    featuresV?: Silhouette;
+    cta?: Silhouette;
+    ctaV?: Silhouette;
+  }>({});
   const lastClip = useRef({ name: "", scrub: -1 });
+
+  /* Поточна (згладжена) поза — доганяє цільову зупинку з інерцією. Мутабельна, без ре-рендерів. */
+  const anim = useRef({
+    yaw: TUNE.steps[0].yaw,
+    pitch: TUNE.steps[0].pitch,
+    roll: TUNE.steps[0].roll,
+    offX: TUNE.steps[0].offX,
+    offY: TUNE.steps[0].offY,
+  });
 
   /* Знімок обох силуетів. Кожен вимагає поставити відповідний кліп у потрібну точку
      (idle для Features, кінець diassemble для CTA), тож порядок важливий; наприкінці
@@ -179,9 +221,11 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
   const computeSilhouettes = useMemo(
     () => () => {
       playClip(CLIP.idle, 0);
-      silhouettes.current.features = snapshot(TUNE.featuresPoses[0]);
+      silhouettes.current.features = snapshot(PROFILE_POSE);
+      silhouettes.current.featuresV = snapshot(PROFILE_POSE, MOBILE_ROLL);
       playClip(CLIP.disassemble, 1);
-      silhouettes.current.cta = snapshot(TUNE.ctaPose);
+      silhouettes.current.cta = snapshot(TUNE.cta);
+      silhouettes.current.ctaV = snapshot(TUNE.cta, MOBILE_ROLL);
       playClip(CLIP.idle, 0);
       lastClip.current = { name: CLIP.idle, scrub: 0 };
     },
@@ -231,7 +275,7 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
     return { scale, x: positionX, y: positionY, boxHeight };
   };
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const group = root.current;
     if (!group) return;
 
@@ -267,18 +311,24 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
       (2 * Math.tan((camera3d.fov * Math.PI) / 180 / 2) * camera3d.position.z) /
       size.height;
 
+    // ≤768 — зброя ВЕРТИКАЛЬНА у Features; ≤600 — вертикальна і в CTA. Для вертикалі вписуємо
+    // ПОВЕРНУТИЙ силует (він високий → зброя заповнює висоту вузького екрана).
+    const isMobile = size.width <= MOBILE_MAX_WIDTH;
+    const ctaVertical = size.width <= CTA_VERTICAL_MAX_WIDTH;
+    const featuresSil = (
+      isMobile ? silhouettes.current.featuresV : silhouettes.current.features
+    )!;
+    const ctaSil = (
+      ctaVertical ? silhouettes.current.ctaV : silhouettes.current.cta
+    )!;
+
     const features = fitSlot(
       "features",
-      silhouettes.current.features,
+      featuresSil,
       worldPerPx,
       camera3d.position.z,
     );
-    const cta = fitSlot(
-      "cta",
-      silhouettes.current.cta!,
-      worldPerPx,
-      camera3d.position.z,
-    );
+    const cta = fitSlot("cta", ctaSil, worldPerPx, camera3d.position.z);
     const from = features ?? cta;
     if (!from) {
       group.visible = false;
@@ -288,45 +338,84 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
 
     const flow = smoothstep(scrub);
 
-    // Поза: ланцюжок ракурсів Features → оглядова поза CTA.
-    const pose =
-      flow > 0
-        ? lerpPose(featuresPoseAt(1), TUNE.ctaPose, flow)
-        : featuresPoseAt(choreo.akmSpin);
+    /* Ціль пози: у Features — зупинка активної картки; у переході в CTA — оглядова поза.
+       Крок беремо ДИСКРЕТНО (по третинах піна), тож поки картка тримається, ціль стала і
+       модель не крутиться по Y; на зміні картки ціль стрибає, а модель ПЛАВНО перетікає. */
+    const stepSet = size.width <= 1024 ? TUNE.compactSteps : TUNE.steps;
+    const step = Math.min(
+      stepSet.length - 1,
+      Math.floor(clamp01(choreo.akmSpin) * stepSet.length),
+    );
+    const target = flow > 0 ? TUNE.cta : stepSet[step];
 
+    // «Тягуче» перетікання — кадронезалежне, НЕ прив'язане до позиції скролу.
+    const a = anim.current;
+    a.yaw = damp(a.yaw, target.yaw, TUNE.glide, delta);
+    a.pitch = damp(a.pitch, target.pitch, TUNE.glide, delta);
+    a.roll = damp(a.roll, target.roll, TUNE.glide, delta);
+    a.offX = damp(a.offX, target.offX, TUNE.glide, delta);
+    a.offY = damp(a.offY, target.offY, TUNE.glide, delta);
+
+    // «Живий» мікрорух під час зупинки — лише по нахилу/крену/висоті, БЕЗ Y.
+    const t = state.clock.elapsedTime;
+    const wobblePitch = Math.sin(t * TUNE.idle.speed) * TUNE.idle.pitch;
+    const wobbleRoll = Math.cos(t * TUNE.idle.speed * 0.9) * TUNE.idle.roll;
+    const wobbleFloat = Math.sin(t * TUNE.idle.speed * 1.1) * TUNE.idle.float;
+
+    // Позиція: у Features — центр слота + зміщення зупинки. У переході/CTA зводимо модель у
+    // ЦЕНТР екрана (щоб фокус був на розбиранні). Але щойно бокс CTA підіймається ВИЩЕ центра
+    // (секція поїхала вгору) — їдемо разом із ним, щоб піти з екрана, а не зависнути над Contacts.
+    const ctaX = to.x;
+    const ctaY = Math.max(0, to.y);
     group.position.set(
-      lerp(from.x, to.x, flow),
-      lerp(from.y, to.y, flow) + pose.lift * from.boxHeight,
+      lerp(from.x, ctaX, flow) + a.offX * size.width * worldPerPx,
+      lerp(from.y, ctaY, flow) +
+        (a.offY + wobbleFloat) * size.height * worldPerPx,
       0,
     );
-    group.scale.setScalar(lerp(from.scale, to.scale, flow));
+    group.scale.setScalar(lerp(from.scale, to.scale * TUNE.ctaSizeMul, flow));
 
-    // «Дихання» — окремо від хореографії, щоб модель жила навіть на зупиненому скролі.
-    const breath =
-      Math.sin(state.clock.elapsedTime * TUNE.breathing.speed) *
-      TUNE.breathing.amplitude;
-    group.rotation.set(
-      pose.pitch + breath,
-      pose.yaw,
-      pose.roll + breath * 0.5,
+    // Екранний поворот (зовнішня група). ≤600 — вертикаль І у Features, І в CTA (сталий roll,
+    // без unwind). 601–768 — Features вертикальна, у CTA плавно «лягає» в горизонталь (unwind
+    // по flow). Десктоп — 0. Поза — на внутрішній групі.
+    const screenRoll = ctaVertical
+      ? MOBILE_ROLL
+      : isMobile
+        ? lerp(MOBILE_ROLL, 0, flow)
+        : 0;
+
+    /* Зовнішня група: екранний roll + РУЧНИЙ доворот користувача — у СКРАННІЙ системі координат
+       (порядок "YXZ": спершу roll робить модель вертикальною, далі pitch навколо ЕКРАННОЇ
+       горизонталі та yaw навколо ЕКРАННОЇ вертикалі). Завдяки цьому на мобільному, де модель
+       повернута roll'ом, перетягування лишається природним — а не «як на десктопі, але
+       повернуте на кут». Ручний доворот діє лише в CTA (масштаб flow: у Features — нуль). */
+    const manualYaw = choreo.akmManualYaw * flow;
+    const manualPitch = choreo.akmManualPitch * flow;
+    group.rotation.set(manualPitch, manualYaw, screenRoll, "YXZ");
+
+    // Внутрішня група — «режисерська» поза (доворот оглядового столу + мікрорух), БЕЗ ручного.
+    pose.current?.rotation.set(
+      a.pitch + wobblePitch,
+      a.yaw,
+      a.roll + wobbleRoll,
       "ZXY",
     );
 
     // Показуємо лише коли модель реально у в'юпорті (щоб було видно переліт).
     projected.copy(group.position).project(camera3d);
     group.visible =
-      Math.abs(projected.x) < 2 &&
-      Math.abs(projected.y) < 2 &&
-      projected.z < 1;
+      Math.abs(projected.x) < 2 && Math.abs(projected.y) < 2 && projected.z < 1;
   });
 
   return (
     <group ref={root} visible={false}>
-      <group ref={model} rotation={FACING}>
-        <primitive
-          object={scene}
-          position={[-bounds.pivot.x, -bounds.pivot.y, -bounds.pivot.z]}
-        />
+      <group ref={pose}>
+        <group ref={model} rotation={FACING}>
+          <primitive
+            object={scene}
+            position={[-bounds.pivot.x, -bounds.pivot.y, -bounds.pivot.z]}
+          />
+        </group>
       </group>
     </group>
   );

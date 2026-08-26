@@ -17,9 +17,12 @@
    Поріг має збігатися з MOBILE_MAX_WIDTH у DroneModel і matchMedia у useHomeChoreography. */
 .droneGap {
   height: 0;
+  width: 100%;
 }
 @media screen and (max-width: 768px) {
   .droneGap {
-    height: min(72vw, 380px);
+    height: auto;
+    aspect-ratio: 1/1;
+    margin-top: -80px;
   }
 }

@@ -122,8 +122,9 @@ const TUNE = {
   /** Множник розміру моделі в CTA — щоб розібрана зброя добре вписалась «на столі». */
   ctaSizeMul: 0.85,
 
-  /** Інерція перетікання між позами (наздоганянь за секунду): менше = повільніше/тягучіше. */
-  glide: 2.4,
+  /** Інерція «допливання» пози (наздоганянь за сек, як у дрона): менше = повільніше/тягучіше.
+     Ціль — БЕЗПЕРЕРВНА scroll-поза (`poseAt`), тож рух і плавний, і на весь скрол. */
+  glide: 3,
 
   /** «Живий» мікрорух під час зупинки — лише по нахилу/крену/висоті, без Y. */
   idle: { pitch: 1.4 * DEG, roll: 1.0 * DEG, float: 0.006, speed: 0.55 },
@@ -131,6 +132,23 @@ const TUNE = {
 
 const toEuler = ({ yaw, pitch, roll }: Angles) =>
   new Euler(pitch, yaw, roll, "ZXY");
+
+/** Лінійна інтерполяція двох зупинок (поза + зміщення центру). */
+const lerpStep = (a: StepPose, b: StepPose, t: number): StepPose => ({
+  yaw: lerp(a.yaw, b.yaw, t),
+  pitch: lerp(a.pitch, b.pitch, t),
+  roll: lerp(a.roll, b.roll, t),
+  offX: lerp(a.offX, b.offX, t),
+  offY: lerp(a.offY, b.offY, t),
+});
+
+/* Поза на прогресі піна Features (0..1) — БЕЗПЕРЕРВНА інтерполяція по ланцюжку зупинок:
+   рух розтягнутий рівно на весь скрол, а не сконцентрований на переходах між картками. */
+const poseAt = (spin: number, steps: StepPose[]): StepPose => {
+  const s = clamp01(spin) * (steps.length - 1);
+  const i = Math.min(steps.length - 2, Math.floor(s));
+  return lerpStep(steps[i], steps[i + 1], smoothstep(s - i));
+};
 
 const slotRect = (slot: AkmSlotKey) =>
   document.getElementById(AKM_SLOT_ID[slot])?.getBoundingClientRect() ?? null;
@@ -206,14 +224,9 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
   }>({});
   const lastClip = useRef({ name: "", scrub: -1 });
 
-  /* Поточна (згладжена) поза — доганяє цільову зупинку з інерцією. Мутабельна, без ре-рендерів. */
-  const anim = useRef({
-    yaw: TUNE.steps[0].yaw,
-    pitch: TUNE.steps[0].pitch,
-    roll: TUNE.steps[0].roll,
-    offX: TUNE.steps[0].offX,
-    offY: TUNE.steps[0].offY,
-  });
+  /* Згладжена (з інерцією) поза — доганяє scroll-цільову `keyPose`, як у дрона: рух «допливає»,
+     а не жорстко прибитий покадрово до скролу. Мутабельна, без ре-рендерів. */
+  const smooth = useRef<StepPose | null>(null);
 
   /* Знімок обох силуетів. Кожен вимагає поставити відповідний кліп у потрібну точку
      (idle для Features, кінець diassemble для CTA), тож порядок важливий; наприкінці
@@ -338,23 +351,24 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
 
     const flow = smoothstep(scrub);
 
-    /* Ціль пози: у Features — зупинка активної картки; у переході в CTA — оглядова поза.
-       Крок беремо ДИСКРЕТНО (по третинах піна), тож поки картка тримається, ціль стала і
-       модель не крутиться по Y; на зміні картки ціль стрибає, а модель ПЛАВНО перетікає. */
+    /* Поза БЕЗПЕРЕРВНО йде за скролом (scrub його вже згладжує): у Features — по ланцюжку
+       зупинок, у переході в CTA — від останньої зупинки до оглядової пози. Жодних дискретних
+       «тримань» і різких доворотів на межах карток — рух розтягнутий рівно на весь скрол. */
     const stepSet = size.width <= 1024 ? TUNE.compactSteps : TUNE.steps;
-    const step = Math.min(
-      stepSet.length - 1,
-      Math.floor(clamp01(choreo.akmSpin) * stepSet.length),
-    );
-    const target = flow > 0 ? TUNE.cta : stepSet[step];
+    const keyPose =
+      flow > 0
+        ? lerpStep(stepSet[stepSet.length - 1], TUNE.cta, flow)
+        : poseAt(choreo.akmSpin, stepSet);
 
-    // «Тягуче» перетікання — кадронезалежне, НЕ прив'язане до позиції скролу.
-    const a = anim.current;
-    a.yaw = damp(a.yaw, target.yaw, TUNE.glide, delta);
-    a.pitch = damp(a.pitch, target.pitch, TUNE.glide, delta);
-    a.roll = damp(a.roll, target.roll, TUNE.glide, delta);
-    a.offX = damp(a.offX, target.offX, TUNE.glide, delta);
-    a.offY = damp(a.offY, target.offY, TUNE.glide, delta);
+    /* Інерція «допливання» (як у дрона): рендеримо не сиру scroll-ціль, а згладжений стан, що
+       доганяє її. Перший кадр — снап без глайду. */
+    if (!smooth.current) smooth.current = { ...keyPose };
+    const sp = smooth.current;
+    sp.yaw = damp(sp.yaw, keyPose.yaw, TUNE.glide, delta);
+    sp.pitch = damp(sp.pitch, keyPose.pitch, TUNE.glide, delta);
+    sp.roll = damp(sp.roll, keyPose.roll, TUNE.glide, delta);
+    sp.offX = damp(sp.offX, keyPose.offX, TUNE.glide, delta);
+    sp.offY = damp(sp.offY, keyPose.offY, TUNE.glide, delta);
 
     // «Живий» мікрорух під час зупинки — лише по нахилу/крену/висоті, БЕЗ Y.
     const t = state.clock.elapsedTime;
@@ -368,9 +382,9 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
     const ctaX = to.x;
     const ctaY = Math.max(0, to.y);
     group.position.set(
-      lerp(from.x, ctaX, flow) + a.offX * size.width * worldPerPx,
+      lerp(from.x, ctaX, flow) + sp.offX * size.width * worldPerPx,
       lerp(from.y, ctaY, flow) +
-        (a.offY + wobbleFloat) * size.height * worldPerPx,
+        (sp.offY + wobbleFloat) * size.height * worldPerPx,
       0,
     );
     group.scale.setScalar(lerp(from.scale, to.scale * TUNE.ctaSizeMul, flow));
@@ -397,9 +411,9 @@ const AkmModel = ({ choreoRef }: { choreoRef: RefObject<Choreo> }) => {
 
     // Внутрішня група — «режисерська» поза (доворот оглядового столу + мікрорух), БЕЗ ручного.
     pose.current?.rotation.set(
-      a.pitch + wobblePitch,
-      a.yaw,
-      a.roll + wobbleRoll,
+      sp.pitch + wobblePitch,
+      sp.yaw,
+      sp.roll + wobbleRoll,
       "ZXY",
     );
 
